@@ -124,7 +124,7 @@ export default function App() {
           <input
             inputMode="decimal"
             value={draftIp}
-            onChange={(e) => setDraftIp(e.target.value)}
+            onChange={(e) => setDraftIp(e.target.value.replace(/,/g, '.').replace(/\s/g, ''))}
             placeholder="192.168.0.25"
           />
           <p className="hint">

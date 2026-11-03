@@ -61,6 +61,8 @@ export default function App() {
   const [panel, setPanel] = useState(false)
   const [apps, setApps] = useState([])
   const [logLines, setLogLines] = useState([])
+  const [toast, setToast] = useState('')
+  const toastUntil = useRef(0)
   const playing = useRef(false)
 
   const tvRef = useRef(null)
@@ -118,6 +120,21 @@ export default function App() {
     playing.current = !playing.current
     tv.key(playing.current ? 'PLAY' : 'PAUSE')
   }
+
+  // Abre um app na TV e mostra por alguns segundos o que foi enviado e o que a TV respondeu.
+  const launch = (name) => {
+    tv.launchApp(name)
+    toastUntil.current = Date.now() + 6000
+    setToast(`Enviando: abrir ${name}...`)
+    setTimeout(() => {
+      if (Date.now() >= toastUntil.current) setToast('')
+    }, 6200)
+  }
+  useEffect(() => {
+    if (Date.now() < toastUntil.current && logLines.length) {
+      setToast(logLines.slice(-3).join('\n'))
+    }
+  }, [logLines])
 
   const brandKeys = Object.keys(BRANDS)
   const connected = status.s === 'connected'
@@ -291,13 +308,13 @@ export default function App() {
         </div>
 
         <div className="r-apps">
-          <button className="btn appbtn netflix" onClick={() => tv.launchApp('netflix')}>
+          <button className="btn appbtn netflix" onClick={() => launch('netflix')}>
             NETFLIX
           </button>
-          <button className="btn appbtn prime" onClick={() => tv.launchApp('prime')}>
+          <button className="btn appbtn prime" onClick={() => launch('prime')}>
             prime video
           </button>
-          <button className="btn appbtn www" onClick={() => tv.launchApp('www')}>
+          <button className="btn appbtn www" onClick={() => launch('www')}>
             WWW
           </button>
         </div>
@@ -308,6 +325,8 @@ export default function App() {
       <button type="button" className="morekeys" onClick={() => setPanel(true)}>
         ▴ Números e mais teclas
       </button>
+
+      {toast && <div className="toast">{toast}</div>}
 
       {panel && (
         <div className="drawer-bg" onClick={() => setPanel(false)}>
@@ -357,10 +376,10 @@ export default function App() {
               <Btn k="MENU" tv={tv} className="small">
                 ☰ Menu
               </Btn>
-              <button className="btn small youtube" onClick={() => tv.launchApp('youtube')}>
+              <button className="btn small youtube" onClick={() => launch('youtube')}>
                 YouTube
               </button>
-              <button className="btn small disney" onClick={() => tv.launchApp('disney')}>
+              <button className="btn small disney" onClick={() => launch('disney')}>
                 Disney+
               </button>
             </div>

@@ -276,8 +276,8 @@ export class SamsungDriver {
 
   _launch(appId, actionType, meta) {
     this._log(`→ abrir ${appId} (${actionType})`)
-    const data = { action_type: actionType, appId }
-    if (meta) data.metaTag = meta
+    // metaTag sempre presente (mesmo vazio): algumas versões da TV exigem o campo
+    const data = { action_type: actionType, appId, metaTag: meta || '' }
     return this._send({
       method: 'ms.channel.emit',
       params: { event: 'ed.apps.launch', to: 'host', data },
@@ -293,7 +293,9 @@ export class SamsungDriver {
     const re = APP_NAMES[name]
     const found = re && this.apps.find((a) => re.test(String(a.name || '')))
     if (found) {
-      const type = Number(found.app_type) === 4 ? 'NATIVE_LAUNCH' : def.type
+      // app_type 2 = app web (DEEP_LINK); os demais (ex.: nativos) = NATIVE_LAUNCH
+      const type = Number(found.app_type) === 2 ? 'DEEP_LINK' : 'NATIVE_LAUNCH'
+      this._log(`lista da TV: ${found.name} id=${found.appId} tipo=${found.app_type}`)
       return this._launch(found.appId, type, def.meta)
     }
 

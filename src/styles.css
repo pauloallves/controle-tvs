@@ -427,6 +427,23 @@ header {
   user-select: text;
   -webkit-user-select: text;
 }
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 16px);
+  transform: translateX(-50%);
+  width: min(92vw, 400px);
+  z-index: 40;
+  background: rgba(22, 26, 35, 0.96);
+  border: 1px solid #2a3242;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  pointer-events: none;
+}
 .reconnect {
   font: inherit;
   font-size: 13px;

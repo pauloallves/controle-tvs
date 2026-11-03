@@ -53,6 +53,16 @@ const APPS = {
   www: '3201907018807',
 }
 
+// Nomes usados para achar o app na lista de apps instalados na TV
+// (o ID real pode variar por modelo/país, o nome não).
+const APP_NAMES = {
+  netflix: /netflix/i,
+  youtube: /^youtube$/i,
+  prime: /prime|amazon/i,
+  disney: /disney/i,
+  www: /^internet$|samsung internet|navegador|browser|^web/i,
+}
+
 const load = (k) => {
   try {
     return localStorage.getItem(k) || null
@@ -70,6 +80,8 @@ export class SamsungDriver {
     this.tryPort = 8002
     this.closedByUser = false
     this.timer = null
+    this.apps = []
+    this.onApps = null
   }
 
   connect(ip) {
@@ -128,6 +140,13 @@ export class SamsungDriver {
           } catch {}
         }
         this.onStatus('connected', 'Conectado')
+        this._requestApps()
+      } else if (msg.event === 'ed.installedApp.get') {
+        const list = msg.data && msg.data.data
+        if (Array.isArray(list)) {
+          this.apps = list
+          if (this.onApps) this.onApps(list)
+        }
       } else if (msg.event === 'ms.channel.unauthorized') {
         this.onStatus('error', 'A TV recusou a conexão. Aceite o pedido na TV.')
       } else if (msg.event === 'ms.channel.timeOut') {
@@ -189,17 +208,39 @@ export class SamsungDriver {
     })
   }
 
-  launchApp(name) {
-    const appId = APPS[name]
-    if (!appId) return false
+  _requestApps() {
+    return this._send({
+      method: 'ms.channel.emit',
+      params: { data: '', event: 'ed.installedApp.get', to: 'host' },
+    })
+  }
+
+  _launch(appId, actionType) {
     return this._send({
       method: 'ms.channel.emit',
       params: {
         event: 'ed.apps.launch',
         to: 'host',
-        data: { action_type: 'DEEP_LINK', appId },
+        data: { action_type: actionType, appId },
       },
     })
+  }
+
+  launchApp(name) {
+    // 1) usa o ID real que a própria TV informou (lista de apps instalados)
+    const re = APP_NAMES[name]
+    const found = re && this.apps.find((a) => re.test(String(a.name || '')))
+    if (found) {
+      const type = Number(found.app_type) === 4 ? 'NATIVE_LAUNCH' : 'DEEP_LINK'
+      return this._launch(found.appId, type)
+    }
+    // 2) sem lista: tenta o ID conhecido nos dois modos de abertura
+    const appId = APPS[name]
+    if (!appId) return false
+    this._requestApps()
+    this._launch(appId, 'DEEP_LINK')
+    setTimeout(() => this._launch(appId, 'NATIVE_LAUNCH'), 500)
+    return true
   }
 
   forgetPairing() {

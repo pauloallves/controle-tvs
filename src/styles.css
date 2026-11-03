@@ -407,6 +407,23 @@ header {
   max-width: 420px;
   margin: 0 auto;
 }
+.sheet {
+  overflow-y: auto;
+}
+.diag {
+  color: var(--muted);
+  font-size: 13px;
+}
+.diag summary {
+  padding: 6px 0;
+}
+.diag ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  line-height: 1.5;
+  user-select: text;
+  -webkit-user-select: text;
+}
 .sheet h2 {
   margin: 0 0 4px;
 }

@@ -59,6 +59,7 @@ export default function App() {
   const [status, setStatus] = useState({ s: 'disconnected', m: '' })
   const [showSettings, setShowSettings] = useState(!load('tv_ip'))
   const [panel, setPanel] = useState(false)
+  const [apps, setApps] = useState([])
   const playing = useRef(false)
 
   const tvRef = useRef(null)
@@ -66,6 +67,7 @@ export default function App() {
   if (brandRef.current !== brand) {
     if (tvRef.current) tvRef.current.disconnect()
     tvRef.current = createDriver(brand, (s, m) => setStatus({ s, m }))
+    tvRef.current.onApps = setApps
     brandRef.current = brand
   }
   const tv = tvRef.current
@@ -148,6 +150,22 @@ export default function App() {
             </button>
             <button onClick={repair}>Refazer pareamento</button>
           </div>
+          <details className="diag">
+            <summary>Diagnóstico: {apps.length} apps encontrados na TV</summary>
+            {apps.length === 0 ? (
+              <p className="hint">
+                A TV ainda não enviou a lista de apps (conecte primeiro).
+              </p>
+            ) : (
+              <ul>
+                {apps.map((a, i) => (
+                  <li key={i}>
+                    {a.name} — {a.appId} (tipo {String(a.app_type)})
+                  </li>
+                ))}
+              </ul>
+            )}
+          </details>
           {ip && (
             <button className="link" onClick={() => setShowSettings(false)}>
               Fechar

@@ -81,6 +81,17 @@ export function createSocket(url) {
   return isNative() ? new NativeSocket(url) : new WebSocket(url)
 }
 
+// Chamada HTTP direta à TV (somente no app Android; no navegador o CORS bloqueia).
+// Devolve { status, body }; status -1 = falha de conexão.
+export async function rest(method, url) {
+  if (!isNative()) return { status: -1, body: 'só no app Android' }
+  try {
+    return await TvSocket.rest({ method, url })
+  } catch (e) {
+    return { status: -1, body: String((e && e.message) || e) }
+  }
+}
+
 // Procura TVs Samsung na rede Wi-Fi (somente no app Android).
 export async function discoverSamsungTvs() {
   if (!isNative()) return []

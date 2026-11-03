@@ -205,6 +205,74 @@ public class TvSocketPlugin extends Plugin {
         call.resolve();
     }
 
+    // ---------------------------------------------------------------- HTTP (API REST da TV)
+
+    /**
+     * Chamada HTTP simples para a TV (ex.: POST http://IP:8001/api/v2/applications/ID).
+     * Somente endereços de rede local. Sempre resolve com {status, body}; status -1 = erro.
+     */
+    @PluginMethod
+    public void rest(final PluginCall call) {
+        final String method = call.getString("method", "GET");
+        final String urlStr = call.getString("url");
+        if (urlStr == null || !(urlStr.startsWith("http://") || urlStr.startsWith("https://"))) {
+            call.reject("endereço inválido");
+            return;
+        }
+        String host;
+        try {
+            host = new URL(urlStr).getHost();
+        } catch (Exception e) {
+            call.reject("endereço inválido");
+            return;
+        }
+        if (!isPrivateHost(host)) {
+            call.reject("somente endereços de rede local são permitidos");
+            return;
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                JSObject result = new JSObject();
+                HttpURLConnection conn = null;
+                try {
+                    conn = (HttpURLConnection) new URL(urlStr).openConnection();
+                    if (conn instanceof HttpsURLConnection) {
+                        ((HttpsURLConnection) conn).setSSLSocketFactory(trustAllFactory);
+                        ((HttpsURLConnection) conn).setHostnameVerifier(trustAllVerifier);
+                    }
+                    conn.setConnectTimeout(3000);
+                    conn.setReadTimeout(5000);
+                    conn.setRequestMethod(method);
+                    if ("POST".equals(method)) {
+                        conn.setDoOutput(true);
+                        conn.setFixedLengthStreamingMode(0);
+                    }
+                    int code = conn.getResponseCode();
+                    InputStream in = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+                    String body = "";
+                    if (in != null) {
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        byte[] buf = new byte[2048];
+                        int n;
+                        while ((n = in.read(buf)) > 0 && out.size() < 8192) {
+                            out.write(buf, 0, n);
+                        }
+                        body = out.toString("UTF-8");
+                    }
+                    result.put("status", code);
+                    result.put("body", body);
+                } catch (Exception e) {
+                    result.put("status", -1);
+                    result.put("body", String.valueOf(e.getMessage()));
+                } finally {
+                    if (conn != null) conn.disconnect();
+                }
+                call.resolve(result);
+            }
+        }).start();
+    }
+
     // ---------------------------------------------------------------- Busca de TV
 
     private static List<String> candidateHosts() {

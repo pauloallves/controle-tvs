@@ -152,15 +152,15 @@ export default function App() {
   // Abre um app na TV e mostra por alguns segundos o que foi enviado e o que a TV respondeu.
   const launch = (name) => {
     tv.launchApp(name)
-    toastUntil.current = Date.now() + 6000
+    toastUntil.current = Date.now() + 12000
     setToast(`Enviando: abrir ${name}...`)
     setTimeout(() => {
       if (Date.now() >= toastUntil.current) setToast('')
-    }, 6200)
+    }, 12200)
   }
   useEffect(() => {
     if (Date.now() < toastUntil.current && logLines.length) {
-      setToast(logLines.slice(-3).join('\n'))
+      setToast(logLines.slice(-6).join('\n'))
     }
   }, [logLines])
 

@@ -12,7 +12,7 @@
 //   forgetPairing()              apaga o token salvo
 //   onApps / onLog               callbacks opcionais (lista de apps e log de diagnóstico)
 
-import { createSocket, OPEN, CONNECTING, discoverSamsungTvs } from '../transport.js'
+import { createSocket, OPEN, CONNECTING, discoverSamsungTvs, isNative, rest } from '../transport.js'
 
 const APP_NAME = 'Controle TV'
 const TOKEN_KEY = 'tv_token_samsung'
@@ -273,6 +273,7 @@ export class SamsungDriver {
   }
 
   _requestApps() {
+    this._log('→ pedir lista de apps')
     return this._send({
       method: 'ms.channel.emit',
       params: { data: '', event: 'ed.installedApp.get', to: 'host' },
@@ -290,9 +291,41 @@ export class SamsungDriver {
   }
 
   launchApp(name) {
+    if (!APPS[name]) return false
+    if (!this.ready) return this._send({})
+    // No app Android, tenta primeiro a API HTTP da TV (REST); se não der, usa o WebSocket.
+    if (isNative()) {
+      this._launchRest(name)
+      return true
+    }
+    return this._launchWs(name)
+  }
+
+  async _launchRest(name) {
+    const def = APPS[name]
+    const re = APP_NAMES[name]
+    const found = re && this.apps.find((a) => re.test(String(a.name || '')))
+    const ids = found ? [String(found.appId)] : def.ids
+    const short = (s) => String(s || '').replace(/\s+/g, ' ').slice(0, 70)
+    for (const id of ids) {
+      const url = `http://${this.ip}:8001/api/v2/applications/${encodeURIComponent(id)}`
+      const info = await rest('GET', url)
+      this._log(`REST GET ${id}: ${info.status} ${short(info.body)}`)
+      if (info.status === 200) {
+        const run = await rest('POST', url)
+        this._log(`REST POST ${id}: ${run.status} ${short(run.body)}`)
+        if (run.status >= 200 && run.status < 300) return
+      } else if (info.status === -1) {
+        break // porta 8001 inacessível: nem adianta tentar os outros IDs
+      }
+    }
+    this._log('REST sem sucesso, tentando pelo WebSocket')
+    this._launchWs(name)
+  }
+
+  _launchWs(name) {
     const def = APPS[name]
     if (!def) return false
-    if (!this.ready) return this._send({})
 
     // 1) usa o ID real que a própria TV informou (lista de apps instalados)
     const re = APP_NAMES[name]

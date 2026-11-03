@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { BRANDS, DEFAULT_BRAND, createDriver } from './drivers/index.js'
+import { isNative } from './transport.js'
 
 const load = (k, d = '') => {
   try {
@@ -62,6 +63,9 @@ export default function App() {
   const [apps, setApps] = useState([])
   const [logLines, setLogLines] = useState([])
   const [toast, setToast] = useState('')
+  const [scanning, setScanning] = useState(false)
+  const [scanDone, setScanDone] = useState(false)
+  const [found, setFound] = useState([])
   const toastUntil = useRef(0)
   const playing = useRef(false)
 
@@ -101,15 +105,39 @@ export default function App() {
     // eslint-disable-next-line
   }, [ip, brand])
 
-  const saveSettings = () => {
-    const v = draftIp.trim()
+  const saveSettings = (address) => {
+    const v = (typeof address === 'string' ? address : draftIp).trim()
     if (!v) return
     save('tv_ip', v)
     save('tv_brand', brand)
+    setDraftIp(v)
     setShowSettings(false)
     if (v === ip) tv.connect(v)
     else setIp(v)
   }
+
+  // Busca automática da TV (só existe no app Android).
+  const canScan = isNative() && !!(BRANDS[brand] && BRANDS[brand].discover)
+  const scan = async () => {
+    if (!canScan || scanning) return
+    setScanning(true)
+    setScanDone(false)
+    setFound([])
+    try {
+      const list = await BRANDS[brand].discover()
+      setFound(list)
+      // Primeira vez e só uma TV na rede: conecta direto, sem digitar nada.
+      if (list.length === 1 && !ip) saveSettings(list[0].ip)
+    } catch {
+      setFound([])
+    }
+    setScanning(false)
+    setScanDone(true)
+  }
+  useEffect(() => {
+    if (showSettings && !ip && canScan) scan()
+    // eslint-disable-next-line
+  }, [])
 
   const repair = () => {
     tv.forgetPairing()
@@ -172,6 +200,26 @@ export default function App() {
             </>
           )}
 
+          {canScan && (
+            <>
+              <button className="primary" onClick={scan} disabled={scanning}>
+                {scanning ? 'Procurando TV na rede...' : 'Buscar TV na rede'}
+              </button>
+              {found.map((t) => (
+                <button key={t.ip} onClick={() => saveSettings(t.ip)}>
+                  {t.name} — {t.ip}
+                  {t.model ? ` (${t.model})` : ''}
+                </button>
+              ))}
+              {scanDone && found.length === 0 && (
+                <p className="hint">
+                  Nenhuma TV encontrada. Confira se a TV está ligada e no mesmo
+                  Wi-Fi do celular, ou digite o IP abaixo.
+                </p>
+              )}
+            </>
+          )}
+
           <label>IP da TV (ex.: 192.168.0.25)</label>
           <input
             inputMode="decimal"
@@ -184,7 +232,7 @@ export default function App() {
             de IP.
           </p>
           <div className="row">
-            <button className="primary" onClick={saveSettings}>
+            <button className="primary" onClick={() => saveSettings()}>
               Salvar e conectar
             </button>
             <button onClick={repair}>Refazer pareamento</button>

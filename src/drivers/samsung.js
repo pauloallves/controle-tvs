@@ -12,8 +12,13 @@
 //   forgetPairing()              apaga o token salvo
 //   onApps / onLog               callbacks opcionais (lista de apps e log de diagnóstico)
 
+import { createSocket, OPEN, CONNECTING, discoverSamsungTvs } from '../transport.js'
+
 const APP_NAME = 'Controle TV'
 const TOKEN_KEY = 'tv_token_samsung'
+
+// Busca automática (só funciona no app Android; no navegador devolve lista vazia).
+export const discover = discoverSamsungTvs
 
 const b64 = (s) => btoa(unescape(encodeURIComponent(s)))
 
@@ -126,7 +131,7 @@ export class SamsungDriver {
 
     let ws
     try {
-      ws = new WebSocket(url)
+      ws = createSocket(url)
     } catch (e) {
       this.onStatus('error', 'Não foi possível abrir a conexão.')
       return
@@ -136,7 +141,7 @@ export class SamsungDriver {
     // Se a TV não responder em 8s, tenta a outra porta.
     clearTimeout(this.timer)
     this.timer = setTimeout(() => {
-      if (this.ws === ws && ws.readyState !== WebSocket.OPEN) ws.close()
+      if (this.ws === ws && ws.readyState !== OPEN) ws.close()
     }, 8000)
 
     let opened = false
@@ -232,14 +237,14 @@ export class SamsungDriver {
   }
 
   get ready() {
-    return !!this.ws && this.ws.readyState === WebSocket.OPEN
+    return !!this.ws && this.ws.readyState === OPEN
   }
 
   // Se o usuário tocar num botão com a conexão caída, reconecta sozinho.
   _kick() {
     const now = Date.now()
     if (!this.ip || now - this.lastKick < 3000) return
-    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) return
+    if (this.ws && this.ws.readyState === CONNECTING) return
     this.lastKick = now
     this.reconnect()
   }

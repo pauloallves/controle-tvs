@@ -1,0 +1,11 @@
+{
+  "appId": "com.controletv.app",
+  "appName": "Controle TV",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#0b0d12"
+  }
+}

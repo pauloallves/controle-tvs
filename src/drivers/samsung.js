@@ -4,11 +4,13 @@
 // Contrato que todo driver deve seguir (ver drivers/index.js):
 //   constructor(onStatus)        onStatus(estado, mensagem)
 //   connect(ip)                  estados: connecting | auth | connected | error | disconnected
+//   reconnect()                  reabre a conexão com o último IP
 //   disconnect()
 //   get ready                    true quando dá para enviar comandos
 //   key(nome)                    nome do vocabulário universal (UP, VOL_UP, 5...)
-//   launchApp(nome)              netflix | youtube | prime | disney
+//   launchApp(nome)              netflix | youtube | prime | disney | www
 //   forgetPairing()              apaga o token salvo
+//   onApps / onLog               callbacks opcionais (lista de apps e log de diagnóstico)
 
 const APP_NAME = 'Controle TV'
 const TOKEN_KEY = 'tv_token_samsung'
@@ -45,12 +47,14 @@ const KEYS = {
 }
 for (let i = 0; i <= 9; i++) KEYS[String(i)] = `KEY_${i}`
 
+// IDs conhecidos (TVs 2019+). O primeiro da lista é o preferido.
+// O Netflix antigo (Tizen < 2019) usava 11101200001.
 const APPS = {
-  netflix: '11101200001',
-  youtube: '111299001912',
-  prime: '3201910019365',
-  disney: '3201901017640',
-  www: '3201907018807',
+  netflix: { ids: ['3201907018807', '11101200001'], type: 'DEEP_LINK' },
+  youtube: { ids: ['111299001912'], type: 'DEEP_LINK' },
+  prime: { ids: ['3201910019365'], type: 'DEEP_LINK' },
+  disney: { ids: ['3201901017640'], type: 'DEEP_LINK' },
+  www: { ids: ['org.tizen.browser'], type: 'NATIVE_LAUNCH', meta: 'https://www.google.com' },
 }
 
 // Nomes usados para achar o app na lista de apps instalados na TV
@@ -71,6 +75,8 @@ const load = (k) => {
   }
 }
 
+const MAX_RETRIES = 6
+
 export class SamsungDriver {
   constructor(onStatus) {
     this.onStatus = onStatus
@@ -80,8 +86,19 @@ export class SamsungDriver {
     this.tryPort = 8002
     this.closedByUser = false
     this.timer = null
+    this.retryTimer = null
+    this.retries = 0
+    this.lastKick = 0
     this.apps = []
     this.onApps = null
+    this.onLog = null
+    this.logLines = []
+  }
+
+  _log(line) {
+    const t = new Date().toTimeString().slice(0, 8)
+    this.logLines = [...this.logLines, `${t} ${line}`].slice(-14)
+    if (this.onLog) this.onLog(this.logLines)
   }
 
   connect(ip) {
@@ -90,7 +107,12 @@ export class SamsungDriver {
     this.ip = ip
     this.token = load(TOKEN_KEY)
     this.tryPort = 8002
+    this.retries = 0
     this._open()
+  }
+
+  reconnect() {
+    if (this.ip) this.connect(this.ip)
   }
 
   _open() {
@@ -100,6 +122,7 @@ export class SamsungDriver {
     if (this.token) url += `&token=${this.token}`
 
     this.onStatus('connecting', `Conectando (${this.tryPort})...`)
+    this._log(`abrindo ${proto}:${this.tryPort}`)
 
     let ws
     try {
@@ -131,6 +154,16 @@ export class SamsungDriver {
       } catch {
         return
       }
+      if (msg.event === 'ed.installedApp.get') {
+        const list = msg.data && msg.data.data
+        this._log(`← apps instalados: ${Array.isArray(list) ? list.length : '?'}`)
+        if (Array.isArray(list)) {
+          this.apps = list
+          if (this.onApps) this.onApps(list)
+        }
+        return
+      }
+      this._log(`← ${JSON.stringify(msg).slice(0, 150)}`)
       if (msg.event === 'ms.channel.connect') {
         const t = msg.data && msg.data.token
         if (t) {
@@ -139,14 +172,9 @@ export class SamsungDriver {
             localStorage.setItem(TOKEN_KEY, this.token)
           } catch {}
         }
+        this.retries = 0
         this.onStatus('connected', 'Conectado')
         this._requestApps()
-      } else if (msg.event === 'ed.installedApp.get') {
-        const list = msg.data && msg.data.data
-        if (Array.isArray(list)) {
-          this.apps = list
-          if (this.onApps) this.onApps(list)
-        }
       } else if (msg.event === 'ms.channel.unauthorized') {
         this.onStatus('error', 'A TV recusou a conexão. Aceite o pedido na TV.')
       } else if (msg.event === 'ms.channel.timeOut') {
@@ -164,18 +192,37 @@ export class SamsungDriver {
         this._open()
         return
       }
-      this.onStatus(
-        'disconnected',
-        opened
-          ? 'Desconectado da TV.'
-          : 'Sem resposta da TV. Confira o IP, o Wi-Fi e se a TV está ligada.'
-      )
+      const retrying = this._retry()
+      if (retrying) {
+        this.onStatus('connecting', 'Reconectando...')
+      } else {
+        this.onStatus(
+          'disconnected',
+          opened
+            ? 'Desconectado da TV. Toque em Reconectar.'
+            : 'Sem resposta da TV. Confira o IP, o Wi-Fi e se a TV está ligada.'
+        )
+      }
     }
+  }
+
+  // Tenta reabrir sozinho (celular bloqueado/desbloqueado, Wi-Fi oscilando).
+  _retry() {
+    if (this.closedByUser || this.retries >= MAX_RETRIES) return false
+    this.retries += 1
+    clearTimeout(this.retryTimer)
+    this.retryTimer = setTimeout(() => {
+      if (this.closedByUser || this.ready) return
+      this.tryPort = 8002
+      this._open()
+    }, Math.min(1000 * this.retries, 5000))
+    return true
   }
 
   disconnect() {
     this.closedByUser = true
     clearTimeout(this.timer)
+    clearTimeout(this.retryTimer)
     if (this.ws) {
       try {
         this.ws.close()
@@ -188,8 +235,20 @@ export class SamsungDriver {
     return !!this.ws && this.ws.readyState === WebSocket.OPEN
   }
 
+  // Se o usuário tocar num botão com a conexão caída, reconecta sozinho.
+  _kick() {
+    const now = Date.now()
+    if (!this.ip || now - this.lastKick < 3000) return
+    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) return
+    this.lastKick = now
+    this.reconnect()
+  }
+
   _send(obj) {
-    if (!this.ready) return false
+    if (!this.ready) {
+      this._kick()
+      return false
+    }
     this.ws.send(JSON.stringify(obj))
     return true
   }
@@ -215,31 +274,37 @@ export class SamsungDriver {
     })
   }
 
-  _launch(appId, actionType) {
+  _launch(appId, actionType, meta) {
+    this._log(`→ abrir ${appId} (${actionType})`)
+    const data = { action_type: actionType, appId }
+    if (meta) data.metaTag = meta
     return this._send({
       method: 'ms.channel.emit',
-      params: {
-        event: 'ed.apps.launch',
-        to: 'host',
-        data: { action_type: actionType, appId },
-      },
+      params: { event: 'ed.apps.launch', to: 'host', data },
     })
   }
 
   launchApp(name) {
+    const def = APPS[name]
+    if (!def) return false
+    if (!this.ready) return this._send({})
+
     // 1) usa o ID real que a própria TV informou (lista de apps instalados)
     const re = APP_NAMES[name]
     const found = re && this.apps.find((a) => re.test(String(a.name || '')))
     if (found) {
-      const type = Number(found.app_type) === 4 ? 'NATIVE_LAUNCH' : 'DEEP_LINK'
-      return this._launch(found.appId, type)
+      const type = Number(found.app_type) === 4 ? 'NATIVE_LAUNCH' : def.type
+      return this._launch(found.appId, type, def.meta)
     }
-    // 2) sem lista: tenta o ID conhecido nos dois modos de abertura
-    const appId = APPS[name]
-    if (!appId) return false
-    this._requestApps()
-    this._launch(appId, 'DEEP_LINK')
-    setTimeout(() => this._launch(appId, 'NATIVE_LAUNCH'), 500)
+
+    // 2) sem lista: tenta cada ID conhecido, no modo certo e depois no outro
+    const other = def.type === 'DEEP_LINK' ? 'NATIVE_LAUNCH' : 'DEEP_LINK'
+    let delay = 0
+    for (const id of def.ids) {
+      setTimeout(() => this._launch(id, def.type, def.meta), delay)
+      delay += 600
+    }
+    setTimeout(() => this._launch(def.ids[0], other, def.meta), delay)
     return true
   }
 

@@ -60,6 +60,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(!load('tv_ip'))
   const [panel, setPanel] = useState(false)
   const [apps, setApps] = useState([])
+  const [logLines, setLogLines] = useState([])
   const playing = useRef(false)
 
   const tvRef = useRef(null)
@@ -68,17 +69,33 @@ export default function App() {
     if (tvRef.current) tvRef.current.disconnect()
     tvRef.current = createDriver(brand, (s, m) => setStatus({ s, m }))
     tvRef.current.onApps = setApps
+    tvRef.current.onLog = setLogLines
     brandRef.current = brand
   }
   const tv = tvRef.current
 
   useEffect(() => {
     if (ip) tv.connect(ip)
-    const onVisible = () => {
-      if (document.visibilityState === 'visible' && ip && !tv.ready) tv.connect(ip)
+    // Ao desbloquear o celular / voltar ao app, o WebSocket costuma estar morto
+    // mesmo parecendo aberto. Por isso reconectamos sempre (usa o token salvo,
+    // então a TV não pergunta de novo).
+    let last = 0
+    const wake = () => {
+      if (!ip || document.visibilityState === 'hidden') return
+      if (Date.now() - last < 1500) return
+      last = Date.now()
+      tv.reconnect()
     }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
+    document.addEventListener('visibilitychange', wake)
+    window.addEventListener('pageshow', wake)
+    window.addEventListener('focus', wake)
+    window.addEventListener('online', wake)
+    return () => {
+      document.removeEventListener('visibilitychange', wake)
+      window.removeEventListener('pageshow', wake)
+      window.removeEventListener('focus', wake)
+      window.removeEventListener('online', wake)
+    }
     // eslint-disable-next-line
   }, [ip, brand])
 
@@ -114,6 +131,11 @@ export default function App() {
             {connected ? 'Conectado' : status.m || 'Desconectado'}
           </span>
         </button>
+        {!connected && ip && (
+          <button className="reconnect" onClick={() => tv.reconnect()}>
+            Reconectar
+          </button>
+        )}
       </header>
 
       {showSettings && (
@@ -165,6 +187,8 @@ export default function App() {
                 ))}
               </ul>
             )}
+            <p className="hint">Últimas mensagens com a TV:</p>
+            <pre>{logLines.length ? logLines.join('\n') : '(nenhuma ainda)'}</pre>
           </details>
           {ip && (
             <button className="link" onClick={() => setShowSettings(false)}>

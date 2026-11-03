@@ -37,6 +37,11 @@ const KEYS = {
   FF: 'KEY_FF',
   GUIDE: 'KEY_GUIDE',
   INFO: 'KEY_INFO',
+  MORE: 'KEY_MORE', // botão "123": abre o painel de números/cores na tela da TV
+  RED: 'KEY_RED',
+  GREEN: 'KEY_GREEN',
+  YELLOW: 'KEY_YELLOW',
+  BLUE: 'KEY_CYAN',
 }
 for (let i = 0; i <= 9; i++) KEYS[String(i)] = `KEY_${i}`
 
@@ -45,6 +50,7 @@ const APPS = {
   youtube: '111299001912',
   prime: '3201910019365',
   disney: '3201901017640',
+  www: '3201907018807',
 }
 
 const load = (k) => {

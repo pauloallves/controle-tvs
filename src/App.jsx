@@ -45,12 +45,21 @@ function Btn({ k, tv, repeat, className = '', children, label }) {
   )
 }
 
+const SourceIcon = () => (
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3.5" y="5" width="17" height="11" rx="1.5" />
+    <path d="M8 19h8M12 16v3M7 9h6M7 12h10" />
+  </svg>
+)
+
 export default function App() {
   const [brand, setBrand] = useState(load('tv_brand', DEFAULT_BRAND))
   const [ip, setIp] = useState(load('tv_ip'))
   const [draftIp, setDraftIp] = useState(load('tv_ip'))
   const [status, setStatus] = useState({ s: 'disconnected', m: '' })
   const [showSettings, setShowSettings] = useState(!load('tv_ip'))
+  const [panel, setPanel] = useState(false)
+  const playing = useRef(false)
 
   const tvRef = useRef(null)
   const brandRef = useRef(null)
@@ -86,6 +95,11 @@ export default function App() {
     if (ip) tv.connect(ip)
   }
 
+  const playPause = () => {
+    playing.current = !playing.current
+    tv.key(playing.current ? 'PLAY' : 'PAUSE')
+  }
+
   const brandKeys = Object.keys(BRANDS)
   const connected = status.s === 'connected'
 
@@ -98,9 +112,6 @@ export default function App() {
             {connected ? 'Conectado' : status.m || 'Desconectado'}
           </span>
         </button>
-        <Btn k="POWER" tv={tv} className="power" label="Ligar/Desligar">
-          ⏻
-        </Btn>
       </header>
 
       {showSettings && (
@@ -150,111 +161,170 @@ export default function App() {
         </div>
       )}
 
-      <div className="apps">
-        <button className="app netflix" onClick={() => tv.launchApp('netflix')}>
-          Netflix
-        </button>
-        <button className="app youtube" onClick={() => tv.launchApp('youtube')}>
-          YouTube
-        </button>
-        <button className="app prime" onClick={() => tv.launchApp('prime')}>
-          Prime
-        </button>
-        <button className="app disney" onClick={() => tv.launchApp('disney')}>
-          Disney+
-        </button>
-      </div>
-
-      <div className="dpad">
-        <Btn k="UP" tv={tv} repeat className="up">
-          ▲
-        </Btn>
-        <Btn k="LEFT" tv={tv} repeat className="left">
-          ◀
-        </Btn>
-        <Btn k="OK" tv={tv} className="ok">
-          OK
-        </Btn>
-        <Btn k="RIGHT" tv={tv} repeat className="right">
-          ▶
-        </Btn>
-        <Btn k="DOWN" tv={tv} repeat className="down">
-          ▼
-        </Btn>
-      </div>
-
-      <div className="row3">
-        <Btn k="BACK" tv={tv}>
-          ↩ Voltar
-        </Btn>
-        <Btn k="HOME" tv={tv}>
-          ⌂ Home
-        </Btn>
-        <Btn k="MENU" tv={tv}>
-          ☰ Menu
-        </Btn>
-      </div>
-
-      <div className="vc">
-        <div className="rocker">
-          <Btn k="VOL_UP" tv={tv} repeat label="Volume +">
-            ＋
-          </Btn>
-          <span className="cap">VOL</span>
-          <Btn k="VOL_DOWN" tv={tv} repeat label="Volume -">
-            －
+      <div className="remote">
+        <div className="r-power">
+          <Btn k="POWER" tv={tv} className="rbtn power" label="Ligar/Desligar">
+            ⏻
           </Btn>
         </div>
-        <div className="mid">
-          <Btn k="MUTE" tv={tv} label="Mudo">
-            🔇
+
+        <div className="r-top">
+          <Btn k="MORE" tv={tv} className="rbtn colors" label="123 (números e cores na TV)">
+            <span className="dots">
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+            <span className="t123">123</span>
           </Btn>
-          <Btn k="SOURCE" tv={tv} label="Fonte">
-            Fonte
+          <Btn k="SOURCE" tv={tv} className="rbtn" label="Fonte">
+            <SourceIcon />
           </Btn>
         </div>
-        <div className="rocker">
-          <Btn k="CH_UP" tv={tv} repeat label="Canal +">
-            ＋
+
+        <div className="ring">
+          <Btn k="UP" tv={tv} repeat className="zone up" label="Cima">
+            <span>⌃</span>
           </Btn>
-          <span className="cap">CH</span>
-          <Btn k="CH_DOWN" tv={tv} repeat label="Canal -">
-            －
+          <Btn k="RIGHT" tv={tv} repeat className="zone right" label="Direita">
+            <span>›</span>
+          </Btn>
+          <Btn k="DOWN" tv={tv} repeat className="zone down" label="Baixo">
+            <span>⌄</span>
+          </Btn>
+          <Btn k="LEFT" tv={tv} repeat className="zone left" label="Esquerda">
+            <span>‹</span>
+          </Btn>
+          <Btn k="OK" tv={tv} className="ok" label="OK">
+            OK
           </Btn>
         </div>
-      </div>
 
-      <div className="media">
-        <Btn k="REW" tv={tv}>
-          ⏪
-        </Btn>
-        <Btn k="PLAY" tv={tv}>
-          ▶︎
-        </Btn>
-        <Btn k="PAUSE" tv={tv}>
-          ⏸
-        </Btn>
-        <Btn k="FF" tv={tv}>
-          ⏩
-        </Btn>
-      </div>
-
-      <div className="numpad">
-        {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((n) => (
-          <Btn key={n} k={n} tv={tv}>
-            {n}
+        <div className="r-mid">
+          <Btn k="BACK" tv={tv} className="rbtn" label="Voltar">
+            ↩
           </Btn>
-        ))}
-        <Btn k="GUIDE" tv={tv} className="small">
-          Guia
-        </Btn>
-        <Btn k="0" tv={tv}>
-          0
-        </Btn>
-        <Btn k="INFO" tv={tv} className="small">
-          Info
-        </Btn>
+          <Btn k="HOME" tv={tv} className="rbtn" label="Home">
+            ⌂
+          </Btn>
+          <button
+            type="button"
+            className="btn rbtn"
+            aria-label="Play/Pause"
+            onClick={playPause}
+          >
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+              <path d="M3 5l8 7-8 7z" />
+              <rect x="14" y="5" width="3" height="14" rx="1" />
+              <rect x="19" y="5" width="3" height="14" rx="1" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="r-vc">
+          <div className="rocker">
+            <Btn k="VOL_UP" tv={tv} repeat label="Volume +">
+              ＋
+            </Btn>
+            <span className="cap">VOL</span>
+            <Btn k="VOL_DOWN" tv={tv} repeat label="Volume -">
+              －
+            </Btn>
+          </div>
+          <div className="mute">
+            <Btn k="MUTE" tv={tv} className="rbtn small" label="Mudo">
+              🔇
+            </Btn>
+          </div>
+          <div className="rocker">
+            <Btn k="CH_UP" tv={tv} repeat label="Canal +">
+              ⌃
+            </Btn>
+            <span className="cap">CH</span>
+            <Btn k="CH_DOWN" tv={tv} repeat label="Canal -">
+              ⌄
+            </Btn>
+          </div>
+        </div>
+
+        <div className="r-apps">
+          <button className="btn appbtn netflix" onClick={() => tv.launchApp('netflix')}>
+            NETFLIX
+          </button>
+          <button className="btn appbtn prime" onClick={() => tv.launchApp('prime')}>
+            prime video
+          </button>
+          <button className="btn appbtn www" onClick={() => tv.launchApp('www')}>
+            WWW
+          </button>
+        </div>
+
+        <div className="brand">SAMSUNG</div>
       </div>
+
+      <button type="button" className="morekeys" onClick={() => setPanel(true)}>
+        ▴ Números e mais teclas
+      </button>
+
+      {panel && (
+        <div className="drawer-bg" onClick={() => setPanel(false)}>
+          <div className="drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="grab" onClick={() => setPanel(false)} />
+
+            <div className="colorkeys">
+              <Btn k="RED" tv={tv} className="ck red" label="Vermelho" />
+              <Btn k="GREEN" tv={tv} className="ck green" label="Verde" />
+              <Btn k="YELLOW" tv={tv} className="ck yellow" label="Amarelo" />
+              <Btn k="BLUE" tv={tv} className="ck blue" label="Azul" />
+            </div>
+
+            <div className="numpad">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((n) => (
+                <Btn key={n} k={n} tv={tv}>
+                  {n}
+                </Btn>
+              ))}
+              <Btn k="GUIDE" tv={tv} className="small">
+                Guia
+              </Btn>
+              <Btn k="0" tv={tv}>
+                0
+              </Btn>
+              <Btn k="INFO" tv={tv} className="small">
+                Info
+              </Btn>
+            </div>
+
+            <div className="media">
+              <Btn k="REW" tv={tv} label="Retroceder">
+                ⏪
+              </Btn>
+              <Btn k="PLAY" tv={tv} label="Play">
+                ▶︎
+              </Btn>
+              <Btn k="PAUSE" tv={tv} label="Pause">
+                ⏸
+              </Btn>
+              <Btn k="FF" tv={tv} label="Avançar">
+                ⏩
+              </Btn>
+            </div>
+
+            <div className="extra">
+              <Btn k="MENU" tv={tv} className="small">
+                ☰ Menu
+              </Btn>
+              <button className="btn small youtube" onClick={() => tv.launchApp('youtube')}>
+                YouTube
+              </button>
+              <button className="btn small disney" onClick={() => tv.launchApp('disney')}>
+                Disney+
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

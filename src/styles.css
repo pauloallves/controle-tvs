@@ -5,6 +5,11 @@
   --text: #e8ecf4;
   --muted: #8b94a7;
   --accent: #4f8cff;
+  --body-1: #34373c;
+  --body-2: #232629;
+  --key: #15171a;
+  --key-edge: #2d3137;
+  --key-text: #d9dce1;
 }
 * {
   box-sizing: border-box;
@@ -25,16 +30,18 @@ body {
 .app {
   max-width: 420px;
   margin: 0 auto;
-  padding: calc(env(safe-area-inset-top) + 12px) 16px
+  padding: calc(env(safe-area-inset-top) + 8px) 16px
     calc(env(safe-area-inset-bottom) + 24px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   position: relative;
+  align-items: center;
 }
 header {
+  width: 100%;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
 }
 .dot-wrap {
@@ -46,7 +53,7 @@ header {
   color: var(--muted);
   font-size: 13px;
   padding: 8px 4px;
-  max-width: 70%;
+  max-width: 100%;
   text-align: left;
 }
 .dot {
@@ -67,149 +74,331 @@ header {
 .dot.disconnected {
   background: #f87171;
 }
-.btn,
-.apps button,
-.sheet button {
+
+/* ---------- corpo do controle ---------- */
+.remote {
+  width: min(100%, 300px);
+  background: linear-gradient(180deg, var(--body-1), var(--body-2));
+  border: 1px solid #3d4147;
+  border-radius: 30px;
+  padding: 18px 24px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.btn {
   font: inherit;
-  color: var(--text);
-  background: var(--panel);
-  border: 1px solid #232a38;
-  border-radius: 14px;
-  min-height: 52px;
+  color: var(--key-text);
+  background: var(--key);
+  border: 1px solid var(--key-edge);
+  transition: transform 0.05s, filter 0.1s;
+}
+.btn:active {
+  transform: scale(0.95);
+  filter: brightness(1.5);
+}
+.rbtn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.r-power {
+  display: flex;
+  justify-content: flex-start;
+}
+.rbtn.power {
+  width: 38px;
+  height: 38px;
   font-size: 18px;
-  transition: transform 0.05s, background 0.1s;
+  color: #ff5a67;
+  background: #1b1416;
+  border-color: #4a2227;
 }
-.btn:active,
-.apps button:active {
-  transform: scale(0.96);
-  background: var(--panel-2);
+.r-top {
+  display: flex;
+  justify-content: space-between;
 }
-.power {
-  width: 52px;
-  min-height: 52px;
-  border-radius: 50%;
-  background: #3a1620;
-  border-color: #5a1f2d;
-  color: #ff7a8a;
-  font-size: 22px;
+.rbtn.colors {
+  flex-direction: column;
+  gap: 1px;
+  font-size: 12px;
 }
-.apps {
+.rbtn.colors .dots {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
 }
-.apps button {
+.rbtn.colors .dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  display: block;
+}
+.dots i:nth-child(1) {
+  background: #ef4444;
+}
+.dots i:nth-child(2) {
+  background: #22c55e;
+}
+.dots i:nth-child(3) {
+  background: #eab308;
+}
+.dots i:nth-child(4) {
+  background: #3b82f6;
+}
+.t123 {
   font-size: 13px;
-  font-weight: 700;
-  min-height: 44px;
+  letter-spacing: 0.5px;
 }
-.apps .netflix {
-  color: #ff4b55;
-}
-.apps .youtube {
-  color: #ff6a6a;
-}
-.apps .prime {
-  color: #4fc3ff;
-}
-.apps .disney {
-  color: #8fa8ff;
-}
-.dpad {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
-  gap: 8px;
-  background: var(--panel);
-  border-radius: 28px;
-  padding: 12px;
-  aspect-ratio: 1;
+
+/* ---------- anel de navegação ---------- */
+.ring {
+  position: relative;
   width: 100%;
-  max-width: 300px;
-  margin: 0 auto;
-}
-.dpad .btn {
-  min-height: 0;
-  background: var(--panel-2);
-  font-size: 22px;
-}
-.dpad .up {
-  grid-area: 1 / 2;
-}
-.dpad .left {
-  grid-area: 2 / 1;
-}
-.dpad .ok {
-  grid-area: 2 / 2;
-  background: var(--accent);
-  border-color: var(--accent);
+  aspect-ratio: 1;
   border-radius: 50%;
-  font-weight: 700;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, #202326, #0d0f10 70%);
+  border: 1px solid #2a2e33;
 }
-.dpad .right {
-  grid-area: 2 / 3;
+.zone {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  display: flex;
+  font-size: 30px;
+  color: #aeb3bb;
 }
-.dpad .down {
-  grid-area: 3 / 2;
+.zone span {
+  line-height: 1;
 }
-.row3,
-.media {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+.zone:active {
+  transform: none;
+  background: rgba(255, 255, 255, 0.08);
 }
-.media {
-  grid-template-columns: repeat(4, 1fr);
+.zone.up {
+  clip-path: polygon(0 0, 100% 0, 50% 50%);
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 7%;
 }
-.row3 .btn {
+.zone.right {
+  clip-path: polygon(100% 0, 100% 100%, 50% 50%);
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 9%;
+}
+.zone.down {
+  clip-path: polygon(100% 100%, 0 100%, 50% 50%);
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 7%;
+}
+.zone.left {
+  clip-path: polygon(0 100%, 0 0, 50% 50%);
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 9%;
+}
+.ok {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 38%;
+  height: 38%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, #1d2023, #101214);
+  border: 1px solid #2c3036;
   font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #c6cad0;
+  z-index: 2;
 }
-.vc {
+.ok:active {
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+/* ---------- linhas de baixo ---------- */
+.r-mid {
+  display: flex;
+  justify-content: space-between;
+}
+.r-vc {
   display: grid;
-  grid-template-columns: 90px 1fr 90px;
-  gap: 12px;
-  align-items: stretch;
+  grid-template-columns: 62px 1fr 62px;
+  gap: 10px;
+  align-items: center;
 }
 .rocker {
-  background: var(--panel);
-  border-radius: 40px;
+  background: #101214;
+  border: 1px solid var(--key-edge);
+  border-radius: 31px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  padding: 6px;
-  gap: 4px;
+  padding: 2px;
 }
 .rocker .btn {
   background: transparent;
   border: 0;
   font-size: 26px;
-  min-height: 56px;
+  height: 52px;
+  line-height: 1;
 }
 .cap {
   text-align: center;
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 1px;
-  color: var(--muted);
+  color: #6f757e;
 }
-.mid {
+.mute {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
   justify-content: center;
 }
-.numpad {
+.rbtn.small {
+  width: 44px;
+  height: 44px;
+  font-size: 16px;
+}
+.r-apps {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
-.numpad .small {
+.appbtn {
+  height: 36px;
+  border-radius: 18px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  padding: 0;
+}
+.appbtn.netflix {
+  color: #e50914;
+}
+.appbtn.prime {
+  color: #4fc3ff;
+  font-weight: 700;
+}
+.appbtn.www {
+  color: #d9dce1;
+  font-size: 12px;
+}
+.brand {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #878d96;
+  margin-top: 6px;
+}
+
+.morekeys {
+  font: inherit;
+  font-size: 14px;
+  color: var(--muted);
+  background: none;
+  border: 1px solid #232a38;
+  border-radius: 20px;
+  padding: 10px 18px;
+}
+.morekeys:active {
+  background: var(--panel);
+}
+
+/* ---------- gaveta de números do app ---------- */
+.drawer-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.drawer {
+  width: 100%;
+  max-width: 420px;
+  background: #14171d;
+  border-radius: 24px 24px 0 0;
+  padding: 10px 16px calc(env(safe-area-inset-bottom) + 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid #272c36;
+}
+.grab {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: #3a404c;
+  margin: 2px auto 6px;
+}
+.drawer .btn {
+  border-radius: 14px;
+  min-height: 50px;
+  font-size: 18px;
+}
+.colorkeys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.ck {
+  min-height: 14px !important;
+  height: 14px;
+  border-radius: 7px !important;
+  border: 0;
+}
+.ck.red {
+  background: #ef4444;
+}
+.ck.green {
+  background: #22c55e;
+}
+.ck.yellow {
+  background: #eab308;
+}
+.ck.blue {
+  background: #3b82f6;
+}
+.numpad,
+.media,
+.extra {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.media {
+  grid-template-columns: repeat(4, 1fr);
+}
+.numpad .small,
+.extra .small {
   font-size: 14px;
   color: var(--muted);
 }
+.extra .youtube {
+  color: #ff6a6a;
+}
+.extra .disney {
+  color: #8fa8ff;
+}
+
+/* ---------- tela de configuração ---------- */
 .sheet {
   position: fixed;
   inset: 0;
-  z-index: 10;
+  z-index: 30;
   background: rgba(11, 13, 18, 0.97);
   padding: calc(env(safe-area-inset-top) + 24px) 20px 24px;
   display: flex;
@@ -225,7 +414,8 @@ header {
   color: var(--muted);
   font-size: 13px;
 }
-.sheet input {
+.sheet input,
+.sheet select {
   font: inherit;
   font-size: 20px;
   padding: 14px;
@@ -240,9 +430,17 @@ header {
   display: flex;
   gap: 8px;
 }
+.sheet button {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid #232a38;
+  border-radius: 14px;
+  min-height: 52px;
+  font-size: 15px;
+}
 .sheet .row button {
   flex: 1;
-  font-size: 15px;
 }
 .sheet .primary {
   background: var(--accent);
@@ -259,13 +457,4 @@ header {
   font-size: 13px;
   line-height: 1.45;
   margin: 0;
-}
-.sheet select {
-  font: inherit;
-  font-size: 18px;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #2a3242;
-  background: var(--panel);
-  color: var(--text);
 }

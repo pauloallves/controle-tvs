@@ -343,7 +343,9 @@ export class SamsungDriver {
       this._log(`REST GET ${id}: ${info.status} ${short(info.body)}`)
       if (info.status === 200) {
         const run = await this._rest('POST', url)
-        this._log(`REST POST ${id}: ${run.status} ${short(run.body)}`)
+        // A TV costuma devolver uma resposta cortada ("HTTP/") mesmo quando aceita; só o status importa.
+        const accepted = run.status >= 200 && run.status < 300
+        this._log(`REST POST ${id}: ${run.status} ${accepted ? 'ok, a TV aceitou' : short(run.body)}`)
         if (run.status >= 200 && run.status < 300) return
       } else if (info.status === -1) {
         break // porta 8001 inacessível: nem adianta tentar os outros IDs

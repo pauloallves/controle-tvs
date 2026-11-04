@@ -244,6 +244,10 @@ public class TvSocketPlugin extends Plugin {
                     conn.setConnectTimeout(3000);
                     conn.setReadTimeout(5000);
                     conn.setRequestMethod(method);
+                    // A TV às vezes devolve uma resposta HTTP truncada; sem isto, o
+                    // resto dela fica na conexão reaproveitada e quebra o pedido seguinte
+                    // ("Unexpected status line"). Uma conexão nova por pedido evita isso.
+                    conn.setRequestProperty("Connection", "close");
                     if ("POST".equals(method)) {
                         conn.setDoOutput(true);
                         conn.setFixedLengthStreamingMode(0);

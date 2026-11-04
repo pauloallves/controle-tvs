@@ -57,9 +57,11 @@ for (let i = 0; i <= 9; i++) KEYS[String(i)] = `KEY_${i}`
 const APPS = {
   netflix: { ids: ['3201907018807', '11101200001'], type: 'DEEP_LINK' },
   youtube: { ids: ['111299001912'], type: 'DEEP_LINK' },
-  prime: { ids: ['3201910019365'], type: 'DEEP_LINK' },
+  prime: { ids: ['3201910019365', '3201910019354'], type: 'DEEP_LINK' },
   disney: { ids: ['3201901017640'], type: 'DEEP_LINK' },
-  www: { ids: ['org.tizen.browser'], type: 'NATIVE_LAUNCH', meta: 'https://www.google.com' },
+  // org.tizen.browser é o ID documentado do navegador, mas a API HTTP da AU8000
+  // respondeu 404 para ele; os outros dois são palpites de teste (aparecem no log).
+  www: { ids: ['org.tizen.browser', 'webbrowser', 'Internet'], type: 'NATIVE_LAUNCH', meta: 'https://www.google.com' },
 }
 
 // Nomes usados para achar o app na lista de apps instalados na TV
@@ -298,7 +300,34 @@ export class SamsungDriver {
       this._launchRest(name)
       return true
     }
+    // No navegador/PWA (ex.: iPhone) a resposta da TV não é legível, mas um POST
+    // "simples" (no-cors) ainda é enviado. Dispara junto com o WebSocket.
+    this._launchWebRest(name)
     return this._launchWs(name)
+  }
+
+  async _launchWebRest(name) {
+    const def = APPS[name]
+    for (const id of def.ids) {
+      try {
+        await fetch(`https://${this.ip}:8002/api/v2/applications/${encodeURIComponent(id)}`, {
+          method: 'POST',
+          mode: 'no-cors',
+        })
+        this._log(`REST POST ${id}: enviado (resposta não legível no navegador)`)
+      } catch (e) {
+        this._log(`REST POST ${id}: falhou (${(e && e.message) || e})`)
+      }
+    }
+  }
+
+  // Uma nova tentativa se a TV devolver uma resposta HTTP quebrada.
+  async _rest(method, url) {
+    let r = await rest(method, url)
+    if (r.status === -1 && /Unexpected status line/i.test(String(r.body))) {
+      r = await rest(method, url)
+    }
+    return r
   }
 
   async _launchRest(name) {
@@ -309,10 +338,10 @@ export class SamsungDriver {
     const short = (s) => String(s || '').replace(/\s+/g, ' ').slice(0, 70)
     for (const id of ids) {
       const url = `http://${this.ip}:8001/api/v2/applications/${encodeURIComponent(id)}`
-      const info = await rest('GET', url)
+      const info = await this._rest('GET', url)
       this._log(`REST GET ${id}: ${info.status} ${short(info.body)}`)
       if (info.status === 200) {
-        const run = await rest('POST', url)
+        const run = await this._rest('POST', url)
         this._log(`REST POST ${id}: ${run.status} ${short(run.body)}`)
         if (run.status >= 200 && run.status < 300) return
       } else if (info.status === -1) {

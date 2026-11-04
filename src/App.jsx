@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useState } from 'react'
 import { BRANDS, DEFAULT_BRAND, createDriver } from './drivers/index.js'
 import { isNative } from './transport.js'
 
+// Data/hash do build (definido no vite.config.js): mostra qual versão está instalada.
+const BUILD = typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'dev'
+
 const load = (k, d = '') => {
   try {
     return localStorage.getItem(k) || d
@@ -66,7 +69,7 @@ export default function App() {
   const [scanning, setScanning] = useState(false)
   const [scanDone, setScanDone] = useState(false)
   const [found, setFound] = useState([])
-  const toastUntil = useRef(0)
+  const toastOn = useRef(false)
   const playing = useRef(false)
 
   const tvRef = useRef(null)
@@ -149,20 +152,22 @@ export default function App() {
     tv.key(playing.current ? 'PLAY' : 'PAUSE')
   }
 
-  // Abre um app na TV e mostra por alguns segundos o que foi enviado e o que a TV respondeu.
+  // Abre um app na TV e mostra o que foi enviado e o que a TV respondeu.
+  // O aviso fica na tela até você tocar nele (para dar tempo de ler/tirar print).
   const launch = (name) => {
     tv.launchApp(name)
-    toastUntil.current = Date.now() + 12000
+    toastOn.current = true
     setToast(`Enviando: abrir ${name}...`)
-    setTimeout(() => {
-      if (Date.now() >= toastUntil.current) setToast('')
-    }, 12200)
   }
   useEffect(() => {
-    if (Date.now() < toastUntil.current && logLines.length) {
-      setToast(logLines.slice(-6).join('\n'))
+    if (toastOn.current && logLines.length) {
+      setToast(logLines.slice(-10).join('\n'))
     }
   }, [logLines])
+  const closeToast = () => {
+    toastOn.current = false
+    setToast('')
+  }
 
   const brandKeys = Object.keys(BRANDS)
   const connected = status.s === 'connected'
@@ -255,6 +260,7 @@ export default function App() {
             <p className="hint">Últimas mensagens com a TV:</p>
             <pre>{logLines.length ? logLines.join('\n') : '(nenhuma ainda)'}</pre>
           </details>
+          <p className="hint">Versão do app: {BUILD}</p>
           {ip && (
             <button className="link" onClick={() => setShowSettings(false)}>
               Fechar
@@ -374,7 +380,12 @@ export default function App() {
         ▴ Números e mais teclas
       </button>
 
-      {toast && <div className="toast">{toast}</div>}
+      {toast && (
+        <div className="toast" onClick={closeToast}>
+          {toast}
+          <div className="toast-hint">toque aqui para fechar</div>
+        </div>
+      )}
 
       {panel && (
         <div className="drawer-bg" onClick={() => setPanel(false)}>

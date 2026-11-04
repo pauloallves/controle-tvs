@@ -45,6 +45,7 @@ const KEYS = {
   GUIDE: 'KEY_GUIDE',
   INFO: 'KEY_INFO',
   MORE: 'KEY_MORE', // botão "123": abre o painel de números/cores na tela da TV
+  WLINK: 'KEY_W_LINK',
   RED: 'KEY_RED',
   GREEN: 'KEY_GREEN',
   YELLOW: 'KEY_YELLOW',
@@ -374,6 +375,14 @@ export class SamsungDriver {
       delay += 600
     }
     setTimeout(() => this._launch(def.ids[0], other, def.meta), delay)
+    // Último recurso só para o navegador: tecla "W.LINK" (da lista de teclas da Samsung;
+    // não há ID/tecla confirmado para o navegador na AU8000, então é um teste).
+    if (name === 'www') {
+      setTimeout(() => {
+        this._log('→ teste: tecla KEY_W_LINK')
+        this.key('WLINK')
+      }, delay + 800)
+    }
     return true
   }
 

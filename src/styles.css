@@ -442,7 +442,16 @@ header {
   color: var(--text);
   white-space: pre-wrap;
   word-break: break-all;
-  pointer-events: none;
+  max-height: 55vh;
+  overflow-y: auto;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.toast-hint {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: right;
 }
 .reconnect {
   font: inherit;

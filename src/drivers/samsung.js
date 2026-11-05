@@ -45,7 +45,6 @@ const KEYS = {
   GUIDE: 'KEY_GUIDE',
   INFO: 'KEY_INFO',
   MORE: 'KEY_MORE', // botão "123": abre o painel de números/cores na tela da TV
-  WLINK: 'KEY_W_LINK',
   RED: 'KEY_RED',
   GREEN: 'KEY_GREEN',
   YELLOW: 'KEY_YELLOW',
@@ -60,9 +59,10 @@ const APPS = {
   youtube: { ids: ['111299001912'], type: 'DEEP_LINK' },
   prime: { ids: ['3201910019365', '3201910019354'], type: 'DEEP_LINK' },
   disney: { ids: ['3201901017640'], type: 'DEEP_LINK' },
-  // org.tizen.browser é o ID documentado do navegador, mas a API HTTP da AU8000
-  // respondeu 404 para ele; os outros dois são palpites de teste (aparecem no log).
-  www: { ids: ['org.tizen.browser', 'webbrowser', 'Internet'], type: 'NATIVE_LAUNCH', meta: 'https://www.google.com' },
+  // Navegador (Samsung Internet). IDs de listas da comunidade, ainda sem confirmação na
+  // AU8000: os numéricos são o app web; org.tizen.browser deu 404 na API HTTP da TV
+  // (fica só como última tentativa pelo WebSocket, em modo nativo).
+  www: { ids: ['3202010022079', '3201907018784', 'org.tizen.browser'], type: 'DEEP_LINK', meta: 'https://www.google.com' },
 }
 
 // Nomes usados para achar o app na lista de apps instalados na TV
@@ -171,7 +171,8 @@ export class SamsungDriver {
         }
         return
       }
-      this._log(`← ${JSON.stringify(msg).slice(0, 150)}`)
+      // o token de pareamento não vai para o log (as pessoas tiram print dele)
+      this._log(`← ${JSON.stringify(msg).replace(/("token":")[^"]*"/g, '$1***"').slice(0, 150)}`)
       if (msg.event === 'ms.channel.connect') {
         const t = msg.data && msg.data.token
         if (t) {
@@ -373,18 +374,12 @@ export class SamsungDriver {
     const other = def.type === 'DEEP_LINK' ? 'NATIVE_LAUNCH' : 'DEEP_LINK'
     let delay = 0
     for (const id of def.ids) {
-      setTimeout(() => this._launch(id, def.type, def.meta), delay)
+      // IDs numéricos são apps web (DEEP_LINK); nomes como org.tizen.browser são nativos
+      const type = /^\d+$/.test(id) ? def.type : 'NATIVE_LAUNCH'
+      setTimeout(() => this._launch(id, type, def.meta), delay)
       delay += 600
     }
     setTimeout(() => this._launch(def.ids[0], other, def.meta), delay)
-    // Último recurso só para o navegador: tecla "W.LINK" (da lista de teclas da Samsung;
-    // não há ID/tecla confirmado para o navegador na AU8000, então é um teste).
-    if (name === 'www') {
-      setTimeout(() => {
-        this._log('→ teste: tecla KEY_W_LINK')
-        this.key('WLINK')
-      }, delay + 800)
-    }
     return true
   }
 

@@ -27,16 +27,40 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overscroll-behavior: none;
 }
+/* --u é a "unidade" do controle: cresce/encolhe com a altura E a largura da tela,
+   para o controle inteiro caber sem rolagem (16px = tamanho de um celular ~820px de altura). */
 .app {
+  --u: clamp(
+    9px,
+    min(
+      calc((100vh - 124px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 46),
+      calc((100vw - 32px) / 19)
+    ),
+    18px
+  );
   max-width: 420px;
   margin: 0 auto;
-  padding: calc(env(safe-area-inset-top) + 8px) 16px
-    calc(env(safe-area-inset-bottom) + 24px);
+  min-height: 100vh;
+  padding: calc(env(safe-area-inset-top) + 6px) 16px calc(env(safe-area-inset-bottom) + 10px);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  justify-content: center;
+  gap: 8px;
   position: relative;
   align-items: center;
+}
+@supports (height: 100dvh) {
+  .app {
+    --u: clamp(
+      9px,
+      min(
+        calc((100dvh - 124px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 46),
+        calc((100vw - 32px) / 19)
+      ),
+      18px
+    );
+    min-height: 100dvh;
+  }
 }
 header {
   width: 100%;
@@ -78,14 +102,15 @@ header {
 
 /* ---------- corpo do controle ---------- */
 .remote {
-  width: min(100%, 300px);
+  width: calc(var(--u) * 18.75);
+  max-width: 100%;
   background: linear-gradient(180deg, var(--body-1), var(--body-2));
   border: 1px solid #3d4147;
-  border-radius: 30px;
-  padding: 18px 24px 22px;
+  border-radius: calc(var(--u) * 1.9);
+  padding: calc(var(--u) * 1.1) calc(var(--u) * 1.5) calc(var(--u) * 1.4);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: calc(var(--u) * 1.1);
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 .btn {
@@ -100,10 +125,10 @@ header {
   filter: brightness(1.5);
 }
 .rbtn {
-  width: 56px;
-  height: 56px;
+  width: calc(var(--u) * 3.5);
+  height: calc(var(--u) * 3.5);
   border-radius: 50%;
-  font-size: 22px;
+  font-size: calc(var(--u) * 1.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -114,9 +139,9 @@ header {
   justify-content: flex-start;
 }
 .rbtn.power {
-  width: 38px;
-  height: 38px;
-  font-size: 18px;
+  width: calc(var(--u) * 2.4);
+  height: calc(var(--u) * 2.4);
+  font-size: calc(var(--u) * 1.1);
   color: #ff5a67;
   background: #1b1416;
   border-color: #4a2227;
@@ -127,17 +152,17 @@ header {
 }
 .rbtn.colors {
   flex-direction: column;
-  gap: 1px;
-  font-size: 12px;
+  gap: calc(var(--u) * 0.06);
+  font-size: calc(var(--u) * 0.75);
 }
 .rbtn.colors .dots {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2px;
+  gap: calc(var(--u) * 0.12);
 }
 .rbtn.colors .dots i {
-  width: 5px;
-  height: 5px;
+  width: calc(var(--u) * 0.3);
+  height: calc(var(--u) * 0.3);
   border-radius: 50%;
   display: block;
 }
@@ -154,8 +179,8 @@ header {
   background: #3b82f6;
 }
 .t123 {
-  font-size: 13px;
-  letter-spacing: 0.5px;
+  font-size: max(8px, calc(var(--u) * 0.8));
+  letter-spacing: 0.03em;
 }
 
 /* ---------- anel de navegação ---------- */
@@ -175,7 +200,7 @@ header {
   border-radius: 0;
   background: transparent;
   display: flex;
-  font-size: 30px;
+  font-size: calc(var(--u) * 1.9);
   color: #aeb3bb;
 }
 .zone span {
@@ -219,9 +244,9 @@ header {
   border-radius: 50%;
   background: radial-gradient(circle at 50% 30%, #1d2023, #101214);
   border: 1px solid #2c3036;
-  font-size: 15px;
+  font-size: calc(var(--u) * 0.95);
   font-weight: 600;
-  letter-spacing: 1px;
+  letter-spacing: 0.06em;
   color: #c6cad0;
   z-index: 2;
 }
@@ -236,30 +261,30 @@ header {
 }
 .r-vc {
   display: grid;
-  grid-template-columns: 62px 1fr 62px;
-  gap: 10px;
+  grid-template-columns: calc(var(--u) * 3.9) 1fr calc(var(--u) * 3.9);
+  gap: calc(var(--u) * 0.6);
   align-items: center;
 }
 .rocker {
   background: #101214;
   border: 1px solid var(--key-edge);
-  border-radius: 31px;
+  border-radius: calc(var(--u) * 1.95);
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  padding: 2px;
+  padding: calc(var(--u) * 0.12);
 }
 .rocker .btn {
   background: transparent;
   border: 0;
-  font-size: 26px;
-  height: 52px;
+  font-size: calc(var(--u) * 1.6);
+  height: calc(var(--u) * 3.2);
   line-height: 1;
 }
 .cap {
   text-align: center;
-  font-size: 10px;
-  letter-spacing: 1px;
+  font-size: max(8px, calc(var(--u) * 0.62));
+  letter-spacing: 0.1em;
   color: #6f757e;
 }
 .mute {
@@ -267,19 +292,19 @@ header {
   justify-content: center;
 }
 .rbtn.small {
-  width: 44px;
-  height: 44px;
-  font-size: 16px;
+  width: calc(var(--u) * 2.75);
+  height: calc(var(--u) * 2.75);
+  font-size: calc(var(--u) * 1);
 }
 .r-apps {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: calc(var(--u) * 0.5);
 }
 .appbtn {
-  height: 36px;
-  border-radius: 18px;
-  font-size: 10px;
+  height: calc(var(--u) * 2.3);
+  border-radius: calc(var(--u) * 1.15);
+  font-size: max(8.5px, calc(var(--u) * 0.66));
   font-weight: 800;
   letter-spacing: 0.3px;
   padding: 0;
@@ -293,15 +318,15 @@ header {
 }
 .appbtn.www {
   color: #d9dce1;
-  font-size: 12px;
+  font-size: max(9px, calc(var(--u) * 0.75));
 }
 .brand {
   text-align: center;
-  font-size: 11px;
+  font-size: max(8px, calc(var(--u) * 0.7));
   font-weight: 700;
-  letter-spacing: 3px;
+  letter-spacing: 0.27em;
   color: #878d96;
-  margin-top: 6px;
+  margin-top: calc(var(--u) * 0.3);
 }
 
 .morekeys {
@@ -311,7 +336,7 @@ header {
   background: none;
   border: 1px solid #232a38;
   border-radius: 20px;
-  padding: 10px 18px;
+  padding: 8px 18px;
 }
 .morekeys:active {
   background: var(--panel);
@@ -430,28 +455,35 @@ header {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(env(safe-area-inset-bottom) + 16px);
+  top: calc(env(safe-area-inset-top) + 6px);
   transform: translateX(-50%);
-  width: min(92vw, 400px);
+  width: min(94vw, 400px);
   z-index: 40;
-  background: rgba(22, 26, 35, 0.96);
+  background: rgba(22, 26, 35, 0.97);
   border: 1px solid #2a3242;
   border-radius: 12px;
-  padding: 10px 12px;
-  font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace;
+  padding: 8px 36px 8px 10px;
+  font: 10px/1.35 ui-monospace, Menlo, Consolas, monospace;
   color: var(--text);
   white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 55vh;
+  overflow-wrap: anywhere;
+  max-height: 34vh;
   overflow-y: auto;
-  user-select: text;
-  -webkit-user-select: text;
+  pointer-events: none; /* os botões embaixo continuam tocáveis */
 }
-.toast-hint {
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 10px;
-  text-align: right;
+.toast-x {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: #2a3242;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1;
+  pointer-events: auto;
 }
 .reconnect {
   font: inherit;

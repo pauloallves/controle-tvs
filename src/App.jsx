@@ -70,6 +70,7 @@ export default function App() {
   const [scanDone, setScanDone] = useState(false)
   const [found, setFound] = useState([])
   const toastOn = useRef(false)
+  const toastTimer = useRef(null)
   const playing = useRef(false)
 
   const tvRef = useRef(null)
@@ -153,21 +154,30 @@ export default function App() {
   }
 
   // Abre um app na TV e mostra o que foi enviado e o que a TV respondeu.
-  // O aviso fica na tela até você tocar nele (para dar tempo de ler/tirar print).
+  // O aviso fica no topo (não cobre os botões) e some 25 s depois da última mensagem,
+  // ou antes, pelo ✕. Dá tempo de ler/tirar print.
+  const closeToast = () => {
+    toastOn.current = false
+    clearTimeout(toastTimer.current)
+    setToast('')
+  }
+  const armToast = () => {
+    clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(closeToast, 25000)
+  }
   const launch = (name) => {
     tv.launchApp(name)
     toastOn.current = true
     setToast(`Enviando: abrir ${name}...`)
+    armToast()
   }
   useEffect(() => {
     if (toastOn.current && logLines.length) {
       setToast(logLines.slice(-10).join('\n'))
+      armToast()
     }
+    // eslint-disable-next-line
   }, [logLines])
-  const closeToast = () => {
-    toastOn.current = false
-    setToast('')
-  }
 
   const brandKeys = Object.keys(BRANDS)
   const connected = status.s === 'connected'
@@ -381,9 +391,11 @@ export default function App() {
       </button>
 
       {toast && (
-        <div className="toast" onClick={closeToast}>
+        <div className="toast">
+          <button type="button" className="toast-x" onClick={closeToast} aria-label="Fechar aviso">
+            ✕
+          </button>
           {toast}
-          <div className="toast-hint">toque aqui para fechar</div>
         </div>
       )}
 

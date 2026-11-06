@@ -321,6 +321,17 @@ export class LgDriver {
     return this._request('ssap://system.launcher/launch', { id })
   }
 
+  // Digita no campo de texto aberto na TV (teclado virtual da LG).
+  sendText(text) {
+    const t = String(text || '')
+    if (!t) return false
+    if (!this.ready) {
+      this._kick()
+      return false
+    }
+    return this._request('ssap://com.webos.service.ime/insertText', { text: t, replace: 0 })
+  }
+
   launchId(id) {
     const v = String(id || '').trim()
     if (!v || !this.ready) return false

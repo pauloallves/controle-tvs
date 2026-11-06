@@ -565,3 +565,62 @@ header {
   line-height: 1.45;
   margin: 0;
 }
+
+/* ---------- gravação de atalho ---------- */
+.recbar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  top: max(8px, env(safe-area-inset-top));
+  z-index: 50;
+  background: #1b2330;
+  border: 1px solid #3b82f6;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #e6e9ee;
+}
+.recbar p {
+  margin: 0 0 8px;
+}
+
+/* ---------- ditado ---------- */
+.dictate textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 16px;
+  color: var(--text, #e6e9ee);
+  background: var(--panel, #161a20);
+  border: 1px solid #2a2f3a;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 8px 0;
+  resize: none;
+}
+.dictate .row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.dictate .row button {
+  flex: 1;
+}
+.dictate .row button {
+  font: inherit;
+  font-size: 15px;
+  color: #e6e9ee;
+  background: #1e232c;
+  border: 1px solid #2f3541;
+  border-radius: 12px;
+  padding: 12px 8px;
+}
+.dictate .row button.primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+.dictate .hint {
+  margin: 0;
+}

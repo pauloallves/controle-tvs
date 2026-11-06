@@ -80,6 +80,18 @@ export default function App() {
   const [scanning, setScanning] = useState(false)
   const [scanDone, setScanDone] = useState(false)
   const [found, setFound] = useState([])
+  const [dictate, setDictate] = useState(false)
+  const [dictText, setDictText] = useState('')
+  const recRef = useRef(null)
+  const [recording, setRecording] = useState(false)
+  const [macro, setMacro] = useState(() => {
+    try {
+      const v = JSON.parse(load('macro_globo', 'null'))
+      return Array.isArray(v) && v.length ? v : null
+    } catch {
+      return null
+    }
+  })
   const toastOn = useRef(false)
   const toastTimer = useRef(null)
   const playing = useRef(false)
@@ -89,6 +101,14 @@ export default function App() {
   if (brandRef.current !== brand) {
     if (tvRef.current) tvRef.current.disconnect()
     tvRef.current = createDriver(brand, (s, m) => setStatus({ s, m }))
+    // Grava as teclas enviadas enquanto o usuário "ensina" um atalho (ver startRec).
+    const d = tvRef.current
+    const sendKey = d.key.bind(d)
+    d.rawKey = sendKey
+    d.key = (n) => {
+      if (recRef.current) recRef.current.push(n)
+      return sendKey(n)
+    }
     tvRef.current.onApps = setApps
     tvRef.current.onLog = setLogLines
     brandRef.current = brand
@@ -188,7 +208,47 @@ export default function App() {
     clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(closeToast, 25000)
   }
+  // Atalho ensinado: reproduz as teclas gravadas (HOME, setas..., OK) com pausas.
+  // Serve para apps cujo ID a TV não revela (ex.: Globoplay na AU8000).
+  const startRec = () => {
+    recRef.current = []
+    setPanel(false)
+    setRecording(true)
+  }
+  const cancelRec = () => {
+    recRef.current = null
+    setRecording(false)
+  }
+  const finishRec = () => {
+    const seq = recRef.current || []
+    recRef.current = null
+    setRecording(false)
+    if (seq.length >= 2) {
+      save('macro_globo', JSON.stringify(seq))
+      setMacro(seq)
+    }
+  }
+  const clearMacro = () => {
+    save('macro_globo', 'null')
+    setMacro(null)
+  }
+  const playMacro = (seq) => {
+    const keys = seq[0] === 'HOME' ? seq : ['HOME', ...seq]
+    let t = 0
+    keys.forEach((k, i) => {
+      setTimeout(() => tv.rawKey(k), t)
+      t += i === 0 ? 1800 : 450
+    })
+  }
+
   const launch = (name, customId) => {
+    if (name === 'globo' && macro) {
+      playMacro(macro)
+      toastOn.current = false
+      setToast('Abrindo o Globoplay pelo atalho gravado...')
+      armToast()
+      return
+    }
     if (name === 'custom') tv.launchId(customId)
     else tv.launchApp(name)
     toastOn.current = true
@@ -348,9 +408,14 @@ export default function App() {
           <Btn k="MORE" tv={tv} className="rbtn" label="123 (números na TV)">
             <span className="t123">123</span>
           </Btn>
-          <Btn k="VOICE" tv={tv} className="rbtn" label="Microfone (assistente de voz)">
+          <button
+            type="button"
+            className="btn rbtn"
+            aria-label="Microfone (abre a Alexa)"
+            onClick={() => (brand === 'samsung' ? launch('alexa') : setDictate(true))}
+          >
             <MicIcon />
-          </Btn>
+          </button>
           <button
             type="button"
             className="btn rbtn colors"
@@ -450,6 +515,62 @@ export default function App() {
         ▴ Números e mais teclas
       </button>
 
+      {dictate && (
+        <div className="drawer-bg" onClick={() => setDictate(false)}>
+          <div className="drawer dictate" onClick={(e) => e.stopPropagation()}>
+            <div className="grab" onClick={() => setDictate(false)} />
+            <p className="hint">
+              Abra a busca na TV (ex.: lupa do YouTube ou do Globoplay), toque no campo abaixo e use o
+              <b> microfone do teclado do celular</b> para falar. Depois toque em Enviar.
+            </p>
+            <textarea
+              rows={3}
+              value={dictText}
+              onChange={(e) => setDictText(e.target.value)}
+              placeholder="Fale ou digite aqui..."
+            />
+            <div className="row">
+              <button
+                className="primary"
+                onClick={() => {
+                  if (dictText.trim()) tv.sendText(dictText.trim())
+                }}
+              >
+                Enviar para a TV
+              </button>
+              <button
+                onClick={() => {
+                  if (!dictText.trim()) return
+                  tv.sendText(dictText.trim())
+                  setTimeout(() => tv.key('OK'), 500)
+                }}
+              >
+                Enviar e buscar
+              </button>
+            </div>
+            <div className="row">
+              <button onClick={() => setDictText('')}>Limpar</button>
+              <button onClick={() => setDictate(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {recording && (
+        <div className="recbar">
+          <p>
+            <b>Gravando atalho do Globoplay.</b> Aperte HOME, leve a seleção até o Globoplay com as
+            setas e aperte OK. Depois toque em Concluir.
+          </p>
+          <div className="row">
+            <button className="primary" onClick={finishRec}>
+              Concluir
+            </button>
+            <button onClick={cancelRec}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
       {toast && (
         <div className="toast">
           <button type="button" className="toast-x" onClick={closeToast} aria-label="Fechar aviso">
@@ -519,12 +640,23 @@ export default function App() {
               <button className="btn small" onClick={() => launch('www')}>
                 Navegador
               </button>
-              <Btn k="MIC" tv={tv} className="small" label="Voz (teste B)">
-                Voz B
-              </Btn>
-              <Btn k="BIXBY" tv={tv} className="small" label="Voz (teste C)">
-                Voz C
-              </Btn>
+              <button
+                className="btn small"
+                onClick={() => {
+                  setPanel(false)
+                  setDictate(true)
+                }}
+              >
+                Ditar texto
+              </button>
+              <button className="btn small" onClick={startRec}>
+                {macro ? 'Regravar Globo' : 'Ensinar Globo'}
+              </button>
+              {macro && (
+                <button className="btn small" onClick={clearMacro}>
+                  Apagar atalho
+                </button>
+              )}
             </div>
           </div>
         </div>

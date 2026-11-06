@@ -62,8 +62,17 @@ const APPS = {
   youtube: { ids: ['111299001912'], type: 'DEEP_LINK' },
   prime: { ids: ['3201910019365', '3201910019354'], type: 'DEEP_LINK' },
   disney: { ids: ['3201901017640'], type: 'DEEP_LINK' },
-  // Globoplay: ID numérico de listas da comunidade; org.tizen.globoplayapp apareceu em outra TV.
-  globo: { ids: ['3201908019022', 'org.tizen.globoplayapp'], type: 'DEEP_LINK' },
+  // Microfone: abre a Alexa (IDs lidos da AU8000 com sdb). O REST deu 404 no teste; o WebSocket é tentado a seguir.
+  alexa: {
+    ids: ['AQKO41xyKP.AmazonAlexa', 'com.samsung.tv.alexa-fullscreen-app'],
+    type: 'DEEP_LINK',
+  },
+  // Globoplay: IDs lidos da própria AU8000 (sdb shell 0 applist). O "Globoplay web" é o
+  // app do Smart Hub; os outros são reserva (o numérico de listas da comunidade deu 404).
+  globo: {
+    ids: ['LnLzvqrcEY.globo', 'org.tizen.globoplayaria', 'org.tizen.globoplayapp', '3201908019022'],
+    type: 'DEEP_LINK',
+  },
   // Navegador (Samsung Internet). IDs de listas da comunidade, ainda sem confirmação na
   // AU8000: os numéricos são o app web; org.tizen.browser deu 404 na API HTTP da TV
   // (fica só como última tentativa pelo WebSocket, em modo nativo).
@@ -286,6 +295,20 @@ export class SamsungDriver {
     })
   }
 
+  // Digita um texto no campo que estiver aberto na TV (busca do YouTube, Netflix, etc.).
+  sendText(text) {
+    const t = String(text || '')
+    if (!t) return false
+    return this._send({
+      method: 'ms.remote.control',
+      params: {
+        Cmd: b64(t),
+        DataOfCmd: 'base64',
+        TypeOfRemote: 'SendInputString',
+      },
+    })
+  }
+
   _requestApps() {
     this._log('→ pedir lista de apps')
     this.apps = []
@@ -303,7 +326,7 @@ export class SamsungDriver {
   launchId(id) {
     const v = String(id || '').trim()
     if (!v) return false
-    APPS.custom = { ids: [v], type: /^\d+$/.test(v) ? 'DEEP_LINK' : 'NATIVE_LAUNCH' }
+    APPS.custom = { ids: [v], type: /^\d+$|^[A-Za-z0-9]{10}\./.test(v) ? 'DEEP_LINK' : 'NATIVE_LAUNCH' }
     return this.launchApp('custom')
   }
 
@@ -397,8 +420,9 @@ export class SamsungDriver {
     const other = def.type === 'DEEP_LINK' ? 'NATIVE_LAUNCH' : 'DEEP_LINK'
     let delay = 0
     for (const id of def.ids) {
-      // IDs numéricos são apps web (DEEP_LINK); nomes como org.tizen.browser são nativos
-      const type = /^\d+$/.test(id) ? def.type : 'NATIVE_LAUNCH'
+      // IDs numéricos e do tipo "LnLzvqrcEY.globo" são apps web (DEEP_LINK);
+      // nomes como org.tizen.browser são nativos
+      const type = /^\d+$|^[A-Za-z0-9]{10}\./.test(id) ? def.type : 'NATIVE_LAUNCH'
       setTimeout(() => this._launch(id, type, def.meta), delay)
       delay += 600
     }

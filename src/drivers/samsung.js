@@ -46,7 +46,8 @@ const KEYS = {
   INFO: 'KEY_INFO',
   MORE: 'KEY_MORE', // botão "123": abre o painel de números/cores na tela da TV
   VOICE: 'KEY_VOICE', // microfone: abre o assistente de voz (o áudio vem do controle, não do app)
-  BIXBY: 'KEY_BIXBY', // alternativa ao KEY_VOICE em algumas TVs
+  MIC: 'KEY_MIC', // variações do botão de voz; qual funciona depende do modelo (teste na gaveta)
+  BIXBY: 'KEY_BIXBY',
   RED: 'KEY_RED',
   GREEN: 'KEY_GREEN',
   YELLOW: 'KEY_YELLOW',
@@ -167,12 +168,16 @@ export class SamsungDriver {
       } catch {
         return
       }
-      if (msg.event === 'ed.installedApp.get') {
-        const list = msg.data && msg.data.data
-        this._log(`← apps instalados: ${Array.isArray(list) ? list.length : '?'}`)
-        if (Array.isArray(list)) {
-          this.apps = list
-          if (this.onApps) this.onApps(list)
+      // Lista de apps: "installedApp" (TVs mais antigas) e "edenApp" (apps do Smart Hub, TVs 2020+).
+      if (msg.event === 'ed.installedApp.get' || msg.event === 'ed.edenApp.get') {
+        const raw = msg.data && msg.data.data
+        const list = Array.isArray(raw) ? raw : raw && Array.isArray(raw.apps) ? raw.apps : null
+        this._log(`← ${msg.event}: ${list ? list.length + ' apps' : 'formato inesperado'}`)
+        if (list) {
+          const byId = new Map(this.apps.map((a) => [String(a.appId), a]))
+          for (const a of list) if (a && a.appId != null) byId.set(String(a.appId), a)
+          this.apps = [...byId.values()]
+          if (this.onApps) this.onApps(this.apps)
         }
         return
       }
@@ -283,10 +288,23 @@ export class SamsungDriver {
 
   _requestApps() {
     this._log('→ pedir lista de apps')
-    return this._send({
+    this.apps = []
+    this._send({
       method: 'ms.channel.emit',
       params: { data: '', event: 'ed.installedApp.get', to: 'host' },
     })
+    return this._send({
+      method: 'ms.channel.emit',
+      params: { data: '', event: 'ed.edenApp.get', to: 'host' },
+    })
+  }
+
+  // Teste manual de um ID de app (aba Diagnóstico).
+  launchId(id) {
+    const v = String(id || '').trim()
+    if (!v) return false
+    APPS.custom = { ids: [v], type: /^\d+$/.test(v) ? 'DEEP_LINK' : 'NATIVE_LAUNCH' }
+    return this.launchApp('custom')
   }
 
   _launch(appId, actionType, meta) {

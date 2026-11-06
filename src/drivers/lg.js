@@ -321,6 +321,13 @@ export class LgDriver {
     return this._request('ssap://system.launcher/launch', { id })
   }
 
+  launchId(id) {
+    const v = String(id || '').trim()
+    if (!v || !this.ready) return false
+    this._log(`→ abrir ${v}`)
+    return this._request('ssap://system.launcher/launch', { id: v })
+  }
+
   forgetPairing() {
     this.key_ = null
     try {

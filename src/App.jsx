@@ -67,6 +67,8 @@ const MicIcon = () => (
 export default function App() {
   const [brand, setBrand] = useState(load('tv_brand', DEFAULT_BRAND))
   const [model, setModel] = useState(load('tv_model'))
+  const [appFilter, setAppFilter] = useState('')
+  const [testId, setTestId] = useState('')
   const [ip, setIp] = useState(load('tv_ip'))
   const [draftIp, setDraftIp] = useState(load('tv_ip'))
   const [status, setStatus] = useState({ s: 'disconnected', m: '' })
@@ -186,8 +188,9 @@ export default function App() {
     clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(closeToast, 25000)
   }
-  const launch = (name) => {
-    tv.launchApp(name)
+  const launch = (name, customId) => {
+    if (name === 'custom') tv.launchId(customId)
+    else tv.launchApp(name)
     toastOn.current = true
     setToast(`Enviando: abrir ${name}...`)
     armToast()
@@ -289,14 +292,34 @@ export default function App() {
                 A TV ainda não enviou a lista de apps (conecte primeiro).
               </p>
             ) : (
-              <ul>
-                {apps.map((a, i) => (
-                  <li key={i}>
-                    {a.name} — {a.appId} (tipo {String(a.app_type)})
-                  </li>
-                ))}
-              </ul>
+              <>
+                <input
+                  value={appFilter}
+                  onChange={(e) => setAppFilter(e.target.value)}
+                  placeholder="Filtrar apps (ex.: globo)"
+                />
+                <ul>
+                  {apps
+                    .filter((a) =>
+                      `${a.name} ${a.appId}`.toLowerCase().includes(appFilter.trim().toLowerCase())
+                    )
+                    .map((a, i) => (
+                      <li key={i}>
+                        {a.name} — {a.appId} (tipo {String(a.app_type)})
+                      </li>
+                    ))}
+                </ul>
+              </>
             )}
+            <p className="hint">Testar um ID de app:</p>
+            <div className="row">
+              <input
+                value={testId}
+                onChange={(e) => setTestId(e.target.value.replace(/\s/g, ''))}
+                placeholder="ex.: 3201908019022"
+              />
+              <button onClick={() => testId && launch('custom', testId)}>Abrir</button>
+            </div>
             <p className="hint">Últimas mensagens com a TV:</p>
             <pre>{logLines.length ? logLines.join('\n') : '(nenhuma ainda)'}</pre>
           </details>
@@ -496,8 +519,11 @@ export default function App() {
               <button className="btn small" onClick={() => launch('www')}>
                 Navegador
               </button>
-              <Btn k="BIXBY" tv={tv} className="small" label="Voz (alternativa)">
-                Voz (alt.)
+              <Btn k="MIC" tv={tv} className="small" label="Voz (teste B)">
+                Voz B
+              </Btn>
+              <Btn k="BIXBY" tv={tv} className="small" label="Voz (teste C)">
+                Voz C
               </Btn>
             </div>
           </div>

@@ -45,6 +45,8 @@ const KEYS = {
   GUIDE: 'KEY_GUIDE',
   INFO: 'KEY_INFO',
   MORE: 'KEY_MORE', // botão "123": abre o painel de números/cores na tela da TV
+  VOICE: 'KEY_VOICE', // microfone: abre o assistente de voz (o áudio vem do controle, não do app)
+  BIXBY: 'KEY_BIXBY', // alternativa ao KEY_VOICE em algumas TVs
   RED: 'KEY_RED',
   GREEN: 'KEY_GREEN',
   YELLOW: 'KEY_YELLOW',
@@ -59,6 +61,8 @@ const APPS = {
   youtube: { ids: ['111299001912'], type: 'DEEP_LINK' },
   prime: { ids: ['3201910019365', '3201910019354'], type: 'DEEP_LINK' },
   disney: { ids: ['3201901017640'], type: 'DEEP_LINK' },
+  // Globoplay: ID numérico de listas da comunidade; org.tizen.globoplayapp apareceu em outra TV.
+  globo: { ids: ['3201908019022', 'org.tizen.globoplayapp'], type: 'DEEP_LINK' },
   // Navegador (Samsung Internet). IDs de listas da comunidade, ainda sem confirmação na
   // AU8000: os numéricos são o app web; org.tizen.browser deu 404 na API HTTP da TV
   // (fica só como última tentativa pelo WebSocket, em modo nativo).
@@ -72,6 +76,7 @@ const APP_NAMES = {
   youtube: /^youtube$/i,
   prime: /prime|amazon/i,
   disney: /disney/i,
+  globo: /globo/i,
   www: /^internet$|samsung internet|navegador|browser|^web/i,
 }
 

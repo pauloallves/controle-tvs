@@ -149,11 +149,15 @@ header {
 .r-top {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 .rbtn.colors {
   flex-direction: column;
   gap: calc(var(--u) * 0.06);
   font-size: calc(var(--u) * 0.75);
+}
+.rbtn.colors .t123 {
+  display: none;
 }
 .rbtn.colors .dots {
   display: grid;
@@ -316,9 +320,9 @@ header {
   color: #4fc3ff;
   font-weight: 700;
 }
-.appbtn.www {
-  color: #d9dce1;
-  font-size: max(9px, calc(var(--u) * 0.75));
+.appbtn.globo {
+  color: #e8ecf1;
+  font-weight: 700;
 }
 .brand {
   text-align: center;

@@ -49,15 +49,24 @@ function Btn({ k, tv, repeat, className = '', children, label }) {
   )
 }
 
-const SourceIcon = () => (
+// Ícone desenhado (o caractere ⏻ aparece errado em vários Androids).
+const PowerIcon = () => (
+  <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 3v8" />
+    <path d="M7.05 6.6a8 8 0 1 0 9.9 0" />
+  </svg>
+)
+
+const MicIcon = () => (
   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="3.5" y="5" width="17" height="11" rx="1.5" />
-    <path d="M8 19h8M12 16v3M7 9h6M7 12h10" />
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" />
   </svg>
 )
 
 export default function App() {
   const [brand, setBrand] = useState(load('tv_brand', DEFAULT_BRAND))
+  const [model, setModel] = useState(load('tv_model'))
   const [ip, setIp] = useState(load('tv_ip'))
   const [draftIp, setDraftIp] = useState(load('tv_ip'))
   const [status, setStatus] = useState({ s: 'disconnected', m: '' })
@@ -109,11 +118,23 @@ export default function App() {
     // eslint-disable-next-line
   }, [ip, brand])
 
+  // Trocar de marca zera o modelo para o padrão da nova marca; só vale depois de "Salvar".
+  const defaultModel = (b) => (BRANDS[b].models && BRANDS[b].models[0].id) || ''
+  const model_ = (BRANDS[brand].models || []).some((m) => m.id === model) ? model : defaultModel(brand)
+  const changeBrand = (b) => {
+    setBrand(b)
+    setModel(defaultModel(b))
+    setFound([])
+    setScanDone(false)
+  }
+  const changeModel = (m) => setModel(m)
+
   const saveSettings = (address) => {
     const v = (typeof address === 'string' ? address : draftIp).trim()
     if (!v) return
     save('tv_ip', v)
     save('tv_brand', brand)
+    save('tv_model', model_)
     setDraftIp(v)
     setShowSettings(false)
     if (v === ip) tv.connect(v)
@@ -202,18 +223,27 @@ export default function App() {
         <div className="sheet">
           <h2>Configurar TV</h2>
 
-          {brandKeys.length > 1 && (
+          <label>Marca da TV</label>
+          <select value={brand} onChange={(e) => changeBrand(e.target.value)}>
+            {brandKeys.map((b) => (
+              <option key={b} value={b}>
+                {BRANDS[b].label}
+              </option>
+            ))}
+          </select>
+          {BRANDS[brand].models && (
             <>
-              <label>Marca</label>
-              <select value={brand} onChange={(e) => setBrand(e.target.value)}>
-                {brandKeys.map((b) => (
-                  <option key={b} value={b}>
-                    {BRANDS[b].label}
+              <label>Ano / modelo</label>
+              <select value={model} onChange={(e) => changeModel(e.target.value)}>
+                {BRANDS[brand].models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
                   </option>
                 ))}
               </select>
             </>
           )}
+          {BRANDS[brand].note && <p className="hint">{BRANDS[brand].note}</p>}
 
           {canScan && (
             <>
@@ -287,23 +317,30 @@ export default function App() {
       <div className="remote">
         <div className="r-power">
           <Btn k="POWER" tv={tv} className="rbtn power" label="Ligar/Desligar">
-            ⏻
+            <PowerIcon />
           </Btn>
         </div>
 
         <div className="r-top">
-          <Btn k="MORE" tv={tv} className="rbtn colors" label="123 (números e cores na TV)">
+          <Btn k="MORE" tv={tv} className="rbtn" label="123 (números na TV)">
+            <span className="t123">123</span>
+          </Btn>
+          <Btn k="VOICE" tv={tv} className="rbtn" label="Microfone (assistente de voz)">
+            <MicIcon />
+          </Btn>
+          <button
+            type="button"
+            className="btn rbtn colors"
+            aria-label="Teclas coloridas e números"
+            onClick={() => setPanel(true)}
+          >
             <span className="dots">
               <i />
               <i />
               <i />
               <i />
             </span>
-            <span className="t123">123</span>
-          </Btn>
-          <Btn k="SOURCE" tv={tv} className="rbtn" label="Fonte">
-            <SourceIcon />
-          </Btn>
+          </button>
         </div>
 
         <div className="ring">
@@ -378,12 +415,12 @@ export default function App() {
           <button className="btn appbtn prime" onClick={() => launch('prime')}>
             prime video
           </button>
-          <button className="btn appbtn www" onClick={() => launch('www')}>
-            WWW
+          <button className="btn appbtn globo" onClick={() => launch('globo')}>
+            globoplay
           </button>
         </div>
 
-        <div className="brand">SAMSUNG</div>
+        <div className="brand">{BRANDS[brand].label.split(' ')[0].toUpperCase()}</div>
       </div>
 
       <button type="button" className="morekeys" onClick={() => setPanel(true)}>
@@ -453,6 +490,15 @@ export default function App() {
               <button className="btn small disney" onClick={() => launch('disney')}>
                 Disney+
               </button>
+              <Btn k="SOURCE" tv={tv} className="small">
+                Fonte
+              </Btn>
+              <button className="btn small" onClick={() => launch('www')}>
+                Navegador
+              </button>
+              <Btn k="BIXBY" tv={tv} className="small" label="Voz (alternativa)">
+                Voz (alt.)
+              </Btn>
             </div>
           </div>
         </div>

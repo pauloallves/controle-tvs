@@ -13,6 +13,8 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -272,6 +274,78 @@ public class TvSocketPlugin extends Plugin {
                 } finally {
                     if (conn != null) conn.disconnect();
                 }
+                call.resolve(result);
+            }
+        }).start();
+    }
+
+    // ---------------------------------------------------------------- Wake-on-LAN
+
+    /**
+     * Liga a TV em espera mandando o "magic packet" (6 x 0xFF + 16 x MAC) por UDP.
+     * O pacote só contém o MAC e só vai para a rede local (broadcast, sub-rede e o IP da TV).
+     */
+    @PluginMethod
+    public void wake(final PluginCall call) {
+        final String mac = call.getString("mac");
+        final String ip = call.getString("ip");
+        if (mac == null || ip == null || !isPrivateHost(ip)) {
+            call.reject("endereço inválido");
+            return;
+        }
+        final byte[] macBytes = new byte[6];
+        try {
+            String[] parts = mac.trim().split("[:\\-]");
+            if (parts.length != 6) throw new NumberFormatException("mac");
+            for (int i = 0; i < 6; i++) {
+                macBytes[i] = (byte) Integer.parseInt(parts[i], 16);
+            }
+        } catch (NumberFormatException e) {
+            call.reject("MAC inválido");
+            return;
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                JSObject result = new JSObject();
+                byte[] packet = new byte[6 + 16 * 6];
+                for (int i = 0; i < 6; i++) packet[i] = (byte) 0xFF;
+                for (int i = 0; i < 16; i++) System.arraycopy(macBytes, 0, packet, 6 + i * 6, 6);
+
+                List<String> targets = new ArrayList<>();
+                targets.add("255.255.255.255");
+                int dot = ip.lastIndexOf('.');
+                if (dot > 0) targets.add(ip.substring(0, dot) + ".255");
+                targets.add(ip);
+
+                DatagramSocket socket = null;
+                int sent = 0;
+                try {
+                    socket = new DatagramSocket();
+                    socket.setBroadcast(true);
+                    // alguns roteadores perdem o primeiro pacote: manda 3 rodadas
+                    for (int round = 0; round < 3; round++) {
+                        for (String t : targets) {
+                            for (int port : new int[] {9, 7}) {
+                                try {
+                                    socket.send(new DatagramPacket(
+                                            packet, packet.length, InetAddress.getByName(t), port));
+                                    sent++;
+                                } catch (Exception ignored) {
+                                }
+                            }
+                        }
+                        try {
+                            Thread.sleep(150);
+                        } catch (InterruptedException ignored) {
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "falha no Wake-on-LAN", e);
+                } finally {
+                    if (socket != null) socket.close();
+                }
+                result.put("sent", sent);
                 call.resolve(result);
             }
         }).start();

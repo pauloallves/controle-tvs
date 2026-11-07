@@ -92,6 +92,18 @@ export async function rest(method, url) {
   }
 }
 
+// Wake-on-LAN: liga a TV em espera (somente no app Android; o navegador não manda UDP).
+// Devolve quantos pacotes foram enviados (0 = falhou ou não suportado).
+export async function wakeTv(mac, ip) {
+  if (!isNative()) return 0
+  try {
+    const r = await TvSocket.wake({ mac, ip })
+    return (r && r.sent) || 0
+  } catch {
+    return 0
+  }
+}
+
 // Procura TVs Samsung na rede Wi-Fi (somente no app Android).
 export async function discoverSamsungTvs() {
   if (!isNative()) return []

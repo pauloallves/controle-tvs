@@ -12,7 +12,7 @@
 //   forgetPairing()              apaga o token salvo
 //   onApps / onLog               callbacks opcionais (lista de apps e log de diagnóstico)
 
-import { createSocket, OPEN, CONNECTING, discoverSamsungTvs, isNative, rest } from '../transport.js'
+import { createSocket, OPEN, CONNECTING, discoverSamsungTvs, isNative, rest, wakeTv } from '../transport.js'
 
 const APP_NAME = 'Controle TV'
 const TOKEN_KEY = 'tv_token_samsung'
@@ -203,6 +203,7 @@ export class SamsungDriver {
         this.retries = 0
         this.onStatus('connected', 'Conectado')
         this._requestApps()
+        this._learnMac()
       } else if (msg.event === 'ms.channel.unauthorized') {
         this.onStatus('error', 'A TV recusou a conexão. Aceite o pedido na TV.')
       } else if (msg.event === 'ms.channel.timeOut') {
@@ -281,9 +282,59 @@ export class SamsungDriver {
     return true
   }
 
+  // Guarda o MAC da TV (necessário para o Wake-on-LAN); só no app Android, com a TV ligada.
+  async _learnMac() {
+    if (!isNative() || !this.ip) return
+    const ip = this.ip
+    const r = await rest('GET', `http://${ip}:8001/api/v2/`)
+    if (r.status !== 200) return
+    try {
+      const mac = JSON.parse(r.body).device.wifiMac
+      if (/^([0-9a-f]{2}[:-]){5}[0-9a-f]{2}$/i.test(mac || '')) {
+        localStorage.setItem(`tv_mac_${ip}`, mac)
+      }
+    } catch {}
+  }
+
+  // Liga a TV em espera por Wake-on-LAN e volta a conectar quando ela acordar.
+  async _wake() {
+    let mac = null
+    try {
+      mac = localStorage.getItem(`tv_mac_${this.ip}`)
+    } catch {}
+    if (!isNative()) {
+      this._log('ligar por WoL só funciona no app Android')
+      return false
+    }
+    if (!mac) {
+      this._log('MAC da TV ainda desconhecido: conecte uma vez com a TV ligada')
+      return false
+    }
+    const sent = await wakeTv(mac, this.ip)
+    this._log(`Wake-on-LAN enviado (${sent} pacotes)`)
+    if (!sent) return false
+    this.onStatus('connecting', 'Ligando a TV...')
+    // a TV leva alguns segundos para acordar; reconecta algumas vezes
+    this.retries = 0
+    clearTimeout(this.retryTimer)
+    this.retryTimer = setTimeout(() => {
+      if (this.closedByUser || this.ready) return
+      this.lastKick = 0
+      this.reconnect()
+    }, 5000)
+    return true
+  }
+
   key(name) {
     const code = KEYS[name]
     if (!code) return false
+    // Power com a conexão caída: a TV pode estar em espera; tenta acordá-la pela rede.
+    if (name === 'POWER' && !this.ready) {
+      this._wake().then((ok) => {
+        if (!ok) this._kick()
+      })
+      return false
+    }
     return this._send({
       method: 'ms.remote.control',
       params: {

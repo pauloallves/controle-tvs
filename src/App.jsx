@@ -244,16 +244,18 @@ export default function App() {
   const launch = (name, customId) => {
     if (name === 'globo' && macro) {
       playMacro(macro)
-      toastOn.current = false
-      setToast('Abrindo o Globoplay pelo atalho gravado...')
-      armToast()
       return
     }
-    if (name === 'custom') tv.launchId(customId)
-    else tv.launchApp(name)
-    toastOn.current = true
-    setToast(`Enviando: abrir ${name}...`)
-    armToast()
+    if (name === 'custom') {
+      // Só o teste de ID (Diagnóstico) mostra o aviso com o que foi enviado e a resposta da TV.
+      // Os botões do controle abrem o app em silêncio; o histórico fica no Diagnóstico.
+      tv.launchId(customId)
+      toastOn.current = true
+      setToast(`Enviando: abrir ${customId}...`)
+      armToast()
+    } else {
+      tv.launchApp(name)
+    }
   }
   useEffect(() => {
     if (toastOn.current && logLines.length) {

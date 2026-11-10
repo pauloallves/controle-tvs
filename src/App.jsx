@@ -18,6 +18,15 @@ const save = (k, v) => {
   } catch {}
 }
 
+// O iPhone isola o armazenamento do ícone da tela inicial (e às vezes o apaga). Por isso o IP
+// também fica no endereço da página (?ip=...): quem adiciona à tela inicial depois de salvar o IP
+// leva o IP junto, e o app o recupera sozinho ao abrir.
+const IPV4 = /^(\d{1,3}\.){3}\d{1,3}$/
+try {
+  const fromUrl = new URLSearchParams(window.location.search).get('ip')
+  if (fromUrl && IPV4.test(fromUrl)) save('tv_ip', fromUrl)
+} catch {}
+
 // Botão com repetição ao segurar (volume, setas, canais).
 function Btn({ k, tv, repeat, className = '', children, label }) {
   const timer = useRef(null)
@@ -78,6 +87,18 @@ export default function App() {
   const [logLines, setLogLines] = useState([])
   const [toast, setToast] = useState('')
   const [scanning, setScanning] = useState(false)
+
+  // Mantém o IP no endereço da página (ver comentário no topo do arquivo).
+  useEffect(() => {
+    try {
+      if (!ip || !IPV4.test(ip)) return
+      const u = new URL(window.location.href)
+      if (u.searchParams.get('ip') !== ip) {
+        u.searchParams.set('ip', ip)
+        window.history.replaceState(null, '', u.toString())
+      }
+    } catch {}
+  }, [ip])
   const [scanDone, setScanDone] = useState(false)
   const [found, setFound] = useState([])
   const [dictate, setDictate] = useState(false)

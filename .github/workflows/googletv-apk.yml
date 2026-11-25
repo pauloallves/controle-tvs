@@ -1,0 +1,46 @@
+name: APK Google TV (teste)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'googletv/**'
+      - '.github/workflows/googletv-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: googletv
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: googletv/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - run: npx cap add android
+      - run: node scripts/patch-android.mjs
+      - run: npx cap sync android
+      - name: Compilar APK
+        working-directory: googletv/android
+        run: ./gradlew assembleDebug --no-daemon
+      - name: Preparar arquivo
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk controle-tv-googletv.apk
+      - name: Publicar na página Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-googletv
+          name: APK Google TV (teste)
+          body: APK de teste do controle para Google TV. Baixe o arquivo abaixo.
+          files: googletv/controle-tv-googletv.apk
+          make_latest: false

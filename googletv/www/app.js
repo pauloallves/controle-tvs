@@ -68,12 +68,13 @@
     msg('Procurando sua TV...'); $('found').innerHTML = ''; $('codebox').hidden = true;
     Atv.scan().then(function (r) {
       var h = (r && r.hosts) || [];
+      var nm = (r && r.names) || {};
       log('encontrados: ' + (h.join(', ') || 'nenhum'));
       if (h.length === 1) { startPair(h[0]); return; }
       if (!h.length) { msg('Não achei a TV. Confira se está ligada e no mesmo Wi-Fi, ou digite o IP abaixo.'); return; }
       msg('Achei mais de uma. Toque na sua TV:');
       h.forEach(function (x, i) {
-        var li = document.createElement('li'); li.textContent = 'TV ' + (i + 1) + ' (' + x + ')';
+        var li = document.createElement('li'); li.textContent = (nm[x] || 'TV ' + (i + 1)) + ' (' + x + ')';
         li.onclick = function () { startPair(x); };
         $('found').appendChild(li);
       });
@@ -135,6 +136,7 @@
     };
   });
 
+  $('slog').onclick = function () { $('drawer').hidden = false; };
   $('menu').onclick = function () { $('drawer').hidden = false; };
   $('close').onclick = function () { $('drawer').hidden = true; };
   $('reconnect').onclick = function () { $('drawer').hidden = true; connect(); };

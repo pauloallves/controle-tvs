@@ -1,5 +1,8 @@
 package com.controletv.googletv;
 
+import android.content.Context;
+import android.net.nsd.NsdManager;
+import android.net.nsd.NsdServiceInfo;
 import android.util.Log;
 
 import com.getcapacitor.JSArray;
@@ -248,7 +251,7 @@ public class AtvRemotePlugin extends Plugin {
     private static boolean portOpen(String host, int port) {
         Socket s = new Socket();
         try {
-            s.connect(new InetSocketAddress(host, port), 700);
+            s.connect(new InetSocketAddress(host, port), 1500);
             return true;
         } catch (Exception e) {
             return false;
@@ -260,36 +263,103 @@ public class AtvRemotePlugin extends Plugin {
         }
     }
 
-    /** Procura aparelhos com a porta de pareamento (6467) aberta na sub-rede do Wi-Fi. */
+    /** Descoberta por mDNS (_androidtvremote2._tcp): é como o app oficial acha a TV. */
+    private void nsdDiscover(final java.util.Map<String, String> out, long waitMs) {
+        final NsdManager nsd = (NsdManager) getContext().getSystemService(Context.NSD_SERVICE);
+        if (nsd == null) return;
+        final ExecutorService resolver = Executors.newSingleThreadExecutor();
+        final NsdManager.DiscoveryListener listener = new NsdManager.DiscoveryListener() {
+            @Override public void onStartDiscoveryFailed(String t, int e) { emit("log", "mDNS falhou: " + e); }
+            @Override public void onStopDiscoveryFailed(String t, int e) { }
+            @Override public void onDiscoveryStarted(String t) { emit("log", "mDNS: procurando"); }
+            @Override public void onDiscoveryStopped(String t) { }
+            @Override public void onServiceLost(NsdServiceInfo i) { }
+            @Override
+            public void onServiceFound(final NsdServiceInfo found) {
+                resolver.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+                        try {
+                            nsd.resolveService(found, new NsdManager.ResolveListener() {
+                                @Override public void onResolveFailed(NsdServiceInfo i, int e) { latch.countDown(); }
+                                @Override
+                                public void onServiceResolved(NsdServiceInfo i) {
+                                    try {
+                                        InetAddress h = i.getHost();
+                                        if (h instanceof Inet4Address) {
+                                            synchronized (out) { out.put(h.getHostAddress(), i.getServiceName()); }
+                                            emit("log", "mDNS: " + i.getServiceName() + " " + h.getHostAddress());
+                                        }
+                                    } catch (Exception ignored) { }
+                                    latch.countDown();
+                                }
+                            });
+                            latch.await(3, TimeUnit.SECONDS);
+                        } catch (Exception ignored) { }
+                    }
+                });
+            }
+        };
+        try {
+            nsd.discoverServices("_androidtvremote2._tcp", NsdManager.PROTOCOL_DNS_SD, listener);
+            Thread.sleep(waitMs);
+        } catch (Exception e) {
+            emit("log", "mDNS erro: " + e.getMessage());
+        } finally {
+            try { nsd.stopServiceDiscovery(listener); } catch (Exception ignored) { }
+            resolver.shutdown();
+        }
+    }
+
+    /** Procura a TV por mDNS e também varrendo as portas 6467/6466 da sub-rede do Wi-Fi. */
     @PluginMethod
     public void scan(final PluginCall call) {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                ExecutorService pool = Executors.newFixedThreadPool(48);
-                JSArray found = new JSArray();
+                final java.util.Map<String, String> found = new java.util.LinkedHashMap<String, String>();
+                Thread nsdThread = new Thread(new Runnable() {
+                    @Override public void run() { nsdDiscover(found, 6000); }
+                });
+                nsdThread.start();
+
+                List<String> hosts = candidateHosts();
+                emit("log", "varrendo " + hosts.size() + " endereços da rede");
+                ExecutorService pool = Executors.newFixedThreadPool(64);
                 try {
                     List<Future<String>> futures = new ArrayList<Future<String>>();
-                    for (final String host : candidateHosts()) {
+                    for (final String host : hosts) {
                         futures.add(pool.submit(new Callable<String>() {
                             @Override
                             public String call() {
-                                return portOpen(host, AtvProtocol.PAIR_PORT) ? host : null;
+                                return (portOpen(host, AtvProtocol.PAIR_PORT) || portOpen(host, AtvProtocol.REMOTE_PORT)) ? host : null;
                             }
                         }));
                     }
                     for (Future<String> f : futures) {
                         try {
-                            String h = f.get(15, TimeUnit.SECONDS);
-                            if (h != null) found.put(h);
+                            String h = f.get(25, TimeUnit.SECONDS);
+                            if (h != null) synchronized (found) { if (!found.containsKey(h)) found.put(h, ""); }
                         } catch (Exception ignored) {
                         }
                     }
                 } finally {
                     pool.shutdownNow();
                 }
+                try { nsdThread.join(8000); } catch (InterruptedException ignored) { }
+
+                JSArray arr = new JSArray();
+                JSObject names = new JSObject();
+                synchronized (found) {
+                    for (java.util.Map.Entry<String, String> e : found.entrySet()) {
+                        arr.put(e.getKey());
+                        names.put(e.getKey(), e.getValue());
+                    }
+                }
                 JSObject result = new JSObject();
-                result.put("hosts", found);
+                result.put("hosts", arr);
+                result.put("names", names);
                 call.resolve(result);
             }
         }).start();

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b0d12">
+<title>Controle Google TV</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="setup" class="screen">
+  <h1>Controle Google TV</h1>
+  <p class="sub">Ligue a TV e deixe o celular no mesmo Wi-Fi. O app procura a TV sozinho.</p>
+  <p id="msg" class="msg">Procurando sua TV...</p>
+  <ul id="found"></ul>
+  <button id="scan" class="ghost">Procurar de novo</button>
+  <div id="codebox" hidden>
+    <label>Digite o código de 6 caracteres que apareceu na TV
+      <input id="code" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="A1B2C3">
+    </label>
+    <button id="confirm" class="primary">Confirmar código</button>
+  </div>
+  <details class="manual">
+    <summary>Não achou? Digitar o IP da TV</summary>
+    <input id="ip" inputmode="decimal" placeholder="192.168.0.20" autocomplete="off">
+    <button id="pair" class="ghost">Parear com este IP</button>
+  </details>
+  <button id="skip" class="ghost" hidden>Já pareei antes: conectar</button>
+</main>
+
+<main id="remote" class="screen" hidden>
+  <header>
+    <span id="dot"></span><span id="status">Conectando...</span>
+    <button id="menu" class="ghost small">⋯</button>
+  </header>
+  <div class="grid3">
+    <button class="k red" data-k="26" aria-label="Ligar/desligar">⏻</button>
+    <button class="k" data-k="284">▦</button>
+    <button class="k" data-k="178">Fontes</button>
+  </div>
+  <div class="grid3 apps">
+    <button class="k app prime" data-url="https://app.primevideo.com">prime video</button>
+    <button class="k app yt" data-url="https://www.youtube.com">YouTube</button>
+    <button class="k app nf" data-url="https://www.netflix.com">NETFLIX</button>
+  </div>
+  <div class="grid3">
+    <button class="k" data-k="172">Guia</button>
+    <button class="k" data-k="165">Info</button>
+    <button class="k" data-k="82">Menu</button>
+  </div>
+  <div class="dpad">
+    <button class="k up" data-k="19" data-rep>▲</button>
+    <button class="k left" data-k="21" data-rep>◀</button>
+    <button class="k ok" data-k="23">OK</button>
+    <button class="k right" data-k="22" data-rep>▶</button>
+    <button class="k down" data-k="20" data-rep>▼</button>
+  </div>
+  <div class="grid3">
+    <button class="k" data-k="4">⮌ Voltar</button>
+    <button class="k" data-k="219">Assistente</button>
+    <button class="k" data-k="3">⌂ Início</button>
+  </div>
+  <div class="grid5">
+    <button class="k" data-k="89">⏪</button>
+    <button class="k" data-k="85">⏯</button>
+    <button class="k" data-k="90">⏩</button>
+    <button class="k" data-k="86">⏹</button>
+    <button class="k" data-k="127">⏸</button>
+  </div>
+  <div class="grid4">
+    <button class="k c-red" data-k="183"></button>
+    <button class="k c-green" data-k="184"></button>
+    <button class="k c-yellow" data-k="185"></button>
+    <button class="k c-blue" data-k="186"></button>
+  </div>
+  <div class="vc">
+    <div class="rocker"><button class="k" data-k="24" data-rep>＋</button><span>VOL</span><button class="k" data-k="25" data-rep>－</button></div>
+    <button class="k" data-k="164">🔇</button>
+    <div class="rocker"><button class="k" data-k="166" data-rep>＋</button><span>CH</span><button class="k" data-k="167" data-rep>－</button></div>
+  </div>
+  <div class="num">
+    <button class="k" data-k="8">1</button><button class="k" data-k="9">2</button><button class="k" data-k="10">3</button>
+    <button class="k" data-k="11">4</button><button class="k" data-k="12">5</button><button class="k" data-k="13">6</button>
+    <button class="k" data-k="14">7</button><button class="k" data-k="15">8</button><button class="k" data-k="16">9</button>
+    <button class="k" data-k="176">⚙</button><button class="k" data-k="7">0</button><button class="k" data-k="84">🔍</button>
+  </div>
+</main>
+
+<section id="drawer" hidden>
+  <div class="sheet">
+    <h2>Opções e diagnóstico</h2>
+    <div class="row">
+      <button id="reconnect" class="ghost">Reconectar</button>
+      <button id="forget" class="ghost">Esquecer pareamento</button>
+    </div>
+    <label>Abrir um link/app (ex.: https://www.youtube.com)
+      <input id="url" placeholder="https://...">
+    </label>
+    <button id="openurl" class="ghost">Abrir na TV</button>
+    <h3>Registro (envie print disto ao testar)</h3>
+    <pre id="log"></pre>
+    <button id="close" class="primary">Fechar</button>
+  </div>
+</section>
+<script src="app.js"></script>
+</body>
+</html>

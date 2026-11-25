@@ -1,0 +1,11 @@
+{
+  "appId": "com.controletv.googletv",
+  "appName": "Controle Google TV",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#0b0d12"
+  }
+}
